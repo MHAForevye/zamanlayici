@@ -1,6 +1,6 @@
 'use strict';
 const $ = s => document.querySelector(s), KEY = 'zamanlayici-v1';
-const DEF = { digit:'#e8fbff', accent:'#22d3ee', bg1:'#0f172a', bg2:'#1e1b4b', angle:135, dim:0, blur:0, size:16, weight:600, spacing:2, glow:20, font:'Orbitron', pos:'cc', ms:true, sound:true, zen:false, wheel:false, wstyle:'drum', img:'', cgo:'#22d3ee', clap:'#22d3ee', crst:'#22d3ee', ctab:'#22d3ee', cpre:'#22d3ee', bs:'line' };
+const DEF = { digit:'#e8fbff', accent:'#22d3ee', bg1:'#0f172a', bg2:'#1e1b4b', angle:135, dim:0, blur:0, size:16, weight:600, spacing:2, glow:20, font:'Orbitron', pos:'cc', ms:true, sound:true, zen:false, wheel:false, casino:false, ctheme:'klasik', img:'', cgo:'#22d3ee', clap:'#22d3ee', crst:'#22d3ee', ctab:'#22d3ee', cpre:'#22d3ee', bs:'line' };
 const mk = (n, d, a, b1, b2, font, w, g, ang, b, bs) => [n, { digit:d, accent:a, bg1:b1, bg2:b2, font, weight:w, glow:g, angle:ang, dim:0, blur:0, cgo:b[0], clap:b[1], crst:b[2], ctab:b[3], cpre:b[4], bs }];
 const THEMES = [
   mk('Obsidyen', '#f3e7c9', '#c9a45c', '#0b0b0d', '#1c1812', 'Cormorant Garamond', 300, 8, 160, ['#c9a45c', '#8a7545', '#8a7545', '#c9a45c', '#6b5a38'], 'line'),
@@ -29,15 +29,16 @@ const lum = h => { const [r, g, b] = [1, 3, 5].map(i => parseInt(h.substr(i, 2),
 const ink = h => lum(h) > .45 ? '#111' : '#fff';           // düğme rengine göre okunaklı yazı rengi
 function apply() {
   const r = document.documentElement.style, A = { h:{l:'flex-start',c:'center',r:'flex-end'}, v:{t:'flex-start',c:'center',b:'flex-end'} };
-  r.setProperty('--digit', S.digit); r.setProperty('--accent', S.accent); r.setProperty('--size', S.size); r.setProperty('--w', S.weight); r.setProperty('--sp', S.spacing); r.setProperty('--glow', S.glow);
+  r.setProperty('--t-acc', ink(S.accent)); r.setProperty('--digit', S.digit); r.setProperty('--accent', S.accent); r.setProperty('--size', S.size); r.setProperty('--w', S.weight); r.setProperty('--sp', S.spacing); r.setProperty('--glow', S.glow);
   for (const k of ['go', 'lap', 'rst', 'tab', 'pre']) { r.setProperty('--c-' + k, S['c' + k]); r.setProperty('--t-' + k, ink(S['c' + k])); }
   document.body.dataset.bs = S.bs;
   r.setProperty('--font', `'${S.font}', ui-monospace, monospace`);
   $('#bg').style.background = S.img ? `center/cover url(${S.img})` : `linear-gradient(${S.angle}deg,${S.bg1},${S.bg2})`;
   $('#bg').style.filter = `blur(${S.blur}px)`; $('#shade').style.background = `rgba(0,0,0,${S.dim / 100})`;
-  const st = $('#stage').style; st.justifyContent = A.v[S.pos[0]]; st.alignItems = A.h[S.pos[1]]; st.textAlign = { l:'left', c:'center', r:'right' }[S.pos[1]];
+  const st = $('#stage').style; st.setProperty('--av', A.v[S.pos[0]]); st.setProperty('--ah', A.h[S.pos[1]]); st.textAlign = { l:'left', c:'center', r:'right' }[S.pos[1]];
   document.body.classList.toggle('zen', S.zen);
-  $('#nums').hidden = S.wheel; $('#wheel').hidden = !(S.wheel && S.wstyle !== 'casino'); $('#cwheel').hidden = !(S.wheel && S.wstyle === 'casino'); syncWheel(); tick();
+  if (cw.th !== S.ctheme) { cw.th = S.ctheme; buildCasino(); }
+  $('#nums').hidden = S.wheel || S.casino; $('#wheel').hidden = !(S.wheel && !S.casino); $('#cwheel').hidden = !S.casino; layout(); syncWheel(); tick();
 }
 
 /* ---------- Zaman mantığı ---------- */
@@ -48,48 +49,84 @@ function fmt(ms) {
   return (h ? h + ':' : '') + p2(m) + ':' + p2(s) + (S.ms ? '.' + p2(c) : '');
 }
 function tick() {
-  let v = el(); if (mode === 'cd') { v = dur - v; if (v <= 0) { v = 0; finish(); } if (!S.ms) v = Math.ceil(v / 1000) * 1000; }
+  let v = el(); if (mode === 'cd') { v = dur - v; if (v <= 0) { v = 0; if (run) finish(); } if (!S.ms) v = Math.ceil(v / 1000) * 1000; }
   const t = fmt(v), c = $('#clock'); if (c.textContent !== t) c.textContent = t;
   const n = Math.max(8, t.length); if (n !== lastN) { lastN = n; document.documentElement.style.setProperty('--n', n); }
   if (run) { document.title = t + ' · Zamanlayıcı'; raf = requestAnimationFrame(tick); }
 }
-function ui() { $('#go').textContent = run ? 'Duraklat' : el() > 0 ? 'Devam' : 'Başlat'; $('#lap').hidden = mode !== 'sw'; document.body.classList.toggle('run', run); }
+function ui() { $('#go').textContent = run ? 'Duraklat' : el() > 0 ? 'Devam' : 'Başlat'; $('#lap').hidden = mode !== 'sw'; document.body.classList.toggle('run', run); wake(run); }
 function toggle() {
   if (mode === 'cd' && !run && dur - el() <= 0) reset();
-  if (run) { base = el(); run = false; cancelAnimationFrame(raf); } else { t0 = performance.now(); run = true; $('#clock').classList.remove('done'); raf = requestAnimationFrame(tick); }
+  if (run) { base = el(); run = false; cancelAnimationFrame(raf); clearTimeout(ft); } else { audio(); t0 = performance.now(); run = true; arm(); $('#clock').classList.remove('done'); raf = requestAnimationFrame(tick); }
   ui(); tick();
 }
-function reset() { run = false; cancelAnimationFrame(raf); base = 0; laps = []; $('#laps').innerHTML = ''; $('#clock').classList.remove('done'); document.title = 'Zamanlayıcı'; ui(); tick(); }
+function reset() { run = false; cancelAnimationFrame(raf); clearTimeout(ft); base = 0; laps = []; $('#laps').innerHTML = ''; $('#clock').classList.remove('done'); document.title = 'Zamanlayıcı'; ui(); tick(); }
 function lap() {
   if (mode !== 'sw' || !run) return; const v = el(), prev = laps.length ? laps[0].t : 0; laps.unshift({ t: v });
   $('#laps').insertAdjacentHTML('afterbegin', `<li><span>Tur ${laps.length}</span><b>${fmt(v - prev)}</b><i>${fmt(v)}</i></li>`);
 }
 function finish() {
   run = false; base = dur; cancelAnimationFrame(raf); $('#clock').classList.add('done'); document.title = 'Süre bitti'; ui();
-  if (S.sound) try { const a = new AudioContext(); [0, .35, .7].forEach(d => { const o = a.createOscillator(), g = a.createGain(); o.frequency.value = 880; o.connect(g); g.connect(a.destination); g.gain.setValueAtTime(.2, a.currentTime + d); g.gain.exponentialRampToValueAtTime(.001, a.currentTime + d + .28); o.start(a.currentTime + d); o.stop(a.currentTime + d + .3); }); } catch (_) {}
+  navigator.vibrate?.([300, 150, 300, 150, 300]);
+  if (S.sound) try { const a = audio(); [0, .35, .7].forEach(d => { const o = a.createOscillator(), g = a.createGain(); o.frequency.value = 880; o.connect(g); g.connect(a.destination); g.gain.setValueAtTime(.2, a.currentTime + d); g.gain.exponentialRampToValueAtTime(.001, a.currentTime + d + .28); o.start(a.currentTime + d); o.stop(a.currentTime + d + .3); }); } catch (_) {}
 }
 function setDur() { if (run) return; dur = ((+$('#th').value || 0) * 3600 + (+$('#tm').value || 0) * 60 + (+$('#ts').value || 0)) * 1000 || 1000; reset(); }
-function setMode(m) { mode = m; reset(); document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('on', b.dataset.m === m)); $('#cdset').hidden = m !== 'cd'; if (m === 'cd') { setDur(); syncWheel(); } }
+function setMode(m) { mode = m; reset(); document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('on', b.dataset.m === m)); $('#cdset').hidden = m !== 'cd'; layout(); if (m === 'cd') { setDur(); syncWheel(); } }
 
 document.querySelectorAll('#modes button').forEach(b => b.onclick = () => setMode(b.dataset.m));
 $('#go').onclick = toggle; $('#rst').onclick = reset; $('#lap').onclick = lap;
 ['#th', '#tm', '#ts'].forEach(s => $(s).oninput = setDur);
 $('#presets').innerHTML = [1, 5, 10, 25, 45].map(m => `<button data-m="${m}">${m} dk</button>`).join('');
 $('#presets').onclick = e => { const m = e.target.dataset.m; if (!m) return; $('#th').value = 0; $('#tm').value = m; $('#ts').value = 0; setDur(); syncWheel(); };
-$('#fs').onclick = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.();
-document.addEventListener('fullscreenchange', () => {          // tam ekranda sade görünüm
-  const f = !!document.fullscreenElement, b = $('#fs');
+const de = document.documentElement, rfs = de.requestFullscreen || de.webkitRequestFullscreen, xfs = document.exitFullscreen || document.webkitExitFullscreen;
+const fsOn = () => !!(document.fullscreenElement || document.webkitFullscreenElement); let pseudoFs = false;   // iPhone gerçek tam ekranı desteklemez: aynı sade görünümü uygularız
+function fsUi() {                                              // tam ekranda sade görünüm
+  const f = fsOn() || pseudoFs, b = $('#fs');
   document.body.classList.toggle('fs', f); if (f) $('#panel').hidden = true;
-  b.textContent = f ? '⤡' : '⛶'; b.title = b.ariaLabel = f ? 'Tam ekrandan çık (F)' : 'Tam ekran (F)';
-});
+  b.textContent = f ? '⤡ Tam ekrandan çık' : '⛶ Tam ekran'; b.title = b.ariaLabel = f ? 'Tam ekrandan çık (F)' : 'Tam ekran (F)'; layout();
+}
+$('#fs').onclick = () => {
+  if (fsOn()) xfs.call(document);
+  else if (pseudoFs) { pseudoFs = false; fsUi(); }
+  else { const soft = () => { pseudoFs = true; fsUi(); }; if (!rfs) return soft(); try { const r = rfs.call(de); r?.catch?.(soft); } catch (_) { soft(); } }
+};
+['fullscreenchange', 'webkitfullscreenchange'].forEach(ev => document.addEventListener(ev, fsUi));
 $('#gear').onclick = () => $('#panel').hidden = !$('#panel').hidden;
+new MutationObserver(() => document.body.classList.toggle('pn', !$('#panel').hidden)).observe($('#panel'), { attributes: true, attributeFilter: ['hidden'] });
+addEventListener('pointerdown', e => {                         // dikey telefonda alttan açılan panel: dışına dokununca kapansın
+  if (!$('#panel').hidden && !e.target.closest('#panel,#gear') && matchMedia('(max-width:640px) and (orientation:portrait)').matches) $('#panel').hidden = true;
+});
 addEventListener('keydown', e => {
-  if (e.key === 'Escape') { $('#panel').hidden = true; return; }
+  if (e.key === 'Escape') { $('#panel').hidden = true; if (pseudoFs) { pseudoFs = false; fsUi(); } return; }
   if (/INPUT|SELECT/.test(e.target.tagName)) return; const k = e.key.toLowerCase();
   if (k === ' ') { e.preventDefault(); toggle(); } else if (k === 'l') lap(); else if (k === 'r') reset(); else if (k === 'f') $('#fs').click();
 });
 let actT; const act = () => { document.body.classList.add('act'); clearTimeout(actT); actT = setTimeout(() => document.body.classList.remove('act'), 2500); };
 ['pointermove', 'pointerdown', 'keydown'].forEach(ev => addEventListener(ev, act));
+
+/* ---------- Mobil / tablet uyumu ---------- */
+function layout() {                                            // ekran boyutu + yöne göre düzen sınıfları
+  const w = innerWidth, h = innerHeight, land = w > h, short = land && h <= 560, wide = land && w / h >= 1.2;
+  document.body.classList.toggle('short', short);
+  document.body.classList.toggle('two', mode === 'cd' && (short || (wide && (S.wheel || S.casino))));
+}
+addEventListener('resize', layout); addEventListener('orientationchange', () => setTimeout(layout, 120));
+let actx, wl, ft;
+const audio = () => {                                          // iOS: ses ancak kullanıcı dokunuşuyla açılır, başlatırken hazırla
+  try { actx = actx || new (window.AudioContext || window.webkitAudioContext)(); if (actx.state === 'suspended') actx.resume(); } catch (_) {}
+  return actx;
+};
+async function wake(on) {                                      // sayaç çalışırken ekran kararmasın
+  try {
+    if (on && 'wakeLock' in navigator && !wl) { wl = await navigator.wakeLock.request('screen'); wl.addEventListener('release', () => wl = null); }
+    else if (!on && wl) { await wl.release(); wl = null; }
+  } catch (_) { wl = null; }
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && run) wake(true); });
+function arm() {                                               // sekme arka plandayken de süre bitince haber ver
+  clearTimeout(ft); if (mode !== 'cd') return;
+  ft = setTimeout(() => { if (run && dur - el() <= 0) tick(); }, Math.max(0, dur - el()) + 30);
+}
 
 /* ---------- Rulet zaman seçici ---------- */
 const WH = 40, WCOLS = [['th', 'sa', 99], ['tm', 'dk', 59], ['ts', 'sn', 59]];
@@ -103,7 +140,7 @@ function mark(u) {                                              // ortadaki değ
   u.children[u._i]?.classList.remove('sel'); u.children[i].classList.add('sel'); u._i = i;
 }
 function syncWheel() {                                          // sayı kutularındaki değeri ruletlere yansıt
-  if (!S.wheel) return;
+  if (!S.wheel && !S.casino) return;
   const t = (+$('#th').value || 0) * 3600 + (+$('#tm').value || 0) * 60 + (+$('#ts').value || 0);
   $('#th').value = Math.min(99, t / 3600 | 0); $('#tm').value = t % 3600 / 60 | 0; $('#ts').value = t % 60;
   document.querySelectorAll('#wheel ul').forEach(u => { u.scrollTop = $('#' + u.dataset.id).value * WH; mark(u); });
@@ -131,29 +168,34 @@ $('#wheel').addEventListener('keydown', e => {
 const cw = { a: 0, cf: 'tm', raf: 0, busy: false, drag: null }, CL = { th: 'sa', tm: 'dk', ts: 'sn' };
 const polar = (r, a) => [150 + r * Math.sin(a * Math.PI / 180), 150 - r * Math.cos(a * Math.PI / 180)];
 const cVal = a => ((Math.round(-a / 6) % 60) + 60) % 60;       // işaretçinin (üst) altındaki cep
+const CTHEMES = {                                              // 3 hazır çark teması
+  klasik:   ['Klasik',   { a:'#c0392b', b:'#141414', z:'#0b7a3b', zt:'#fff', w1:'#8a5a33', w2:'#2b190d', g:'#c9a45c', tr1:'#33333a', tr2:'#1b1b20', hub:'#3a2a14', val:'#f3e7c9' }],
+  kraliyet: ['Kraliyet', { a:'#6d28d9', b:'#0f0a24', z:'#d4a82a', zt:'#111', w1:'#3b2f86', w2:'#0d0a26', g:'#e5c76b', tr1:'#2a2640', tr2:'#16132b', hub:'#1d1745', val:'#f1e6ff' }],
+  buz:      ['Buz',      { a:'#2b8fb5', b:'#0b1f2e', z:'#0e7490', zt:'#fff', w1:'#a9b8c9', w2:'#3b4a5c', g:'#e2e8f0', tr1:'#2b3a4a', tr2:'#16222e', hub:'#1e2f40', val:'#e8f6ff' }]
+};
 function buildCasino() {
-  let w = '';
+  const t = (CTHEMES[S.ctheme] || CTHEMES.klasik)[1]; let w = '';
   for (let i = 0; i < 60; i++) {
     const a0 = (i - .5) * 6, a1 = (i + .5) * 6, [x0, y0] = polar(124, a0), [x1, y1] = polar(124, a1), [x2, y2] = polar(72, a1), [x3, y3] = polar(72, a0);
-    w += `<path d="M${x0} ${y0}A124 124 0 0 1 ${x1} ${y1}L${x2} ${y2}A72 72 0 0 0 ${x3} ${y3}Z" fill="${i === 0 ? '#0b7a3b' : i % 2 ? '#c0392b' : '#141414'}" stroke="#c9a45c" stroke-width=".6"/>` +
-         `<text x="150" y="44" transform="rotate(${i * 6} 150 150)" text-anchor="middle" dominant-baseline="central" font-size="8.5" font-weight="600" fill="#fff" font-family="Inter,system-ui,sans-serif">${i}</text>`;
+    w += `<path d="M${x0} ${y0}A124 124 0 0 1 ${x1} ${y1}L${x2} ${y2}A72 72 0 0 0 ${x3} ${y3}Z" fill="${i === 0 ? t.z : i % 2 ? t.a : t.b}" stroke="${t.g}" stroke-width=".6"/>` +
+         `<text x="150" y="44" transform="rotate(${i * 6} 150 150)" text-anchor="middle" dominant-baseline="central" font-size="8.5" font-weight="600" fill="${i === 0 ? t.zt : '#fff'}" font-family="Inter,system-ui,sans-serif">${i}</text>`;
   }
   $('#cwheel').innerHTML = `<div id="cfields">${Object.entries(CL).map(([f, l]) => `<button data-f="${f}"><b></b> ${l}</button>`).join('')}</div>
 <svg id="cwsvg" viewBox="0 0 300 300" tabindex="0" role="slider" aria-label="Casino çarkı">
-<defs><radialGradient id="cwood" cx="50%" cy="40%" r="70%"><stop offset="0" stop-color="#8a5a33"/><stop offset="1" stop-color="#2b190d"/></radialGradient>
-<radialGradient id="ctrack" cx="50%" cy="50%" r="50%"><stop offset=".9" stop-color="#33333a"/><stop offset="1" stop-color="#1b1b20"/></radialGradient>
+<defs><radialGradient id="cwood" cx="50%" cy="40%" r="70%"><stop offset="0" stop-color="${t.w1}"/><stop offset="1" stop-color="${t.w2}"/></radialGradient>
+<radialGradient id="ctrack" cx="50%" cy="50%" r="50%"><stop offset=".9" stop-color="${t.tr1}"/><stop offset="1" stop-color="${t.tr2}"/></radialGradient>
 <radialGradient id="cball" cx="35%" cy="30%" r="70%"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#9a9a9a"/></radialGradient></defs>
-<circle cx="150" cy="150" r="148" fill="url(#cwood)" stroke="#c9a45c" stroke-width="2"/>
-<circle cx="150" cy="150" r="138" fill="url(#ctrack)" stroke="#c9a45c" stroke-width="1.5"/>
-<g id="cwrot">${w}<circle cx="150" cy="150" r="72" fill="#3a2a14" stroke="#c9a45c" stroke-width="2"/>${[0, 90].map(a => `<line x1="150" y1="84" x2="150" y2="216" transform="rotate(${a} 150 150)" stroke="#c9a45c" stroke-width="3" stroke-linecap="round"/>`).join('')}</g>
-<circle cx="150" cy="150" r="124" fill="none" stroke="#c9a45c" stroke-width="1.5"/>
-<polygon points="150,22 141,4 159,4" fill="#e0b85c" stroke="#7a5a1c"/>
+<circle cx="150" cy="150" r="148" fill="url(#cwood)" stroke="${t.g}" stroke-width="2"/>
+<circle cx="150" cy="150" r="138" fill="url(#ctrack)" stroke="${t.g}" stroke-width="1.5"/>
+<g id="cwrot">${w}<circle cx="150" cy="150" r="72" fill="${t.hub}" stroke="${t.g}" stroke-width="2"/>${[0, 90].map(a => `<line x1="150" y1="84" x2="150" y2="216" transform="rotate(${a} 150 150)" stroke="${t.g}" stroke-width="3" stroke-linecap="round"/>`).join('')}</g>
+<circle cx="150" cy="150" r="124" fill="none" stroke="${t.g}" stroke-width="1.5"/>
+<polygon points="150,22 141,4 159,4" fill="${t.g}" stroke="rgba(0,0,0,.5)"/>
 <circle id="cwb" r="4.6" fill="url(#cball)" stroke="rgba(0,0,0,.3)" stroke-width=".5"/>
-<circle cx="150" cy="150" r="44" fill="#0d0d0f" stroke="#c9a45c" stroke-width="2"/>
-<text id="cwval" x="150" y="148" text-anchor="middle" dominant-baseline="central" font-size="34" font-weight="700" fill="#f3e7c9" style="font-family:var(--font)">00</text>
-<text id="cwlab" x="150" y="177" text-anchor="middle" font-size="11" fill="#c9a45c" font-family="Inter,system-ui,sans-serif">dk</text></svg>
+<circle cx="150" cy="150" r="44" fill="#0d0d0f" stroke="${t.g}" stroke-width="2"/>
+<text id="cwval" x="150" y="148" text-anchor="middle" dominant-baseline="central" font-size="34" font-weight="700" fill="${t.val}" style="font-family:var(--font)">00</text>
+<text id="cwlab" x="150" y="177" text-anchor="middle" font-size="11" fill="${t.g}" font-family="Inter,system-ui,sans-serif">dk</text></svg>
 <button id="cspin">Çevir</button>`;
-  placeBall();
+  setA(cw.a, true); placeBall(); cFields();
 }
 function placeBall(a = 0, r = 116) { const [x, y] = polar(r, a), b = $('#cwb'); b.setAttribute('cx', x); b.setAttribute('cy', y); }
 function cFields() {
@@ -221,7 +263,8 @@ function build() {
   }
   h += sel('font', ['Yazı tipi', FONTS.map(f => `<option>${f}</option>`).join('')]) + sel('pos', ['Konum', Object.entries(POS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')]);
   h += '</section><section><h3>Davranış</h3><label>Salise göster<input type="checkbox" data-k="ms"></label><label>Bitince ses çal<input type="checkbox" data-k="sound"></label><label>Çalışırken arayüzü gizle<input type="checkbox" data-k="zen"></label></section>';
-  h += '<section><h3>Zaman seçimi <span class="plus">PLUS</span></h3><label>Rulet ile süre seç<input type="checkbox" data-k="wheel"></label>' + sel('wstyle', ['Rulet tipi', '<option value="drum">Kaydırmalı</option><option value="casino">Casino çarkı</option>']) + '</section>';
+  h += '<section><h3>Zaman seçimi <span class="plus">PLUS</span></h3><label>Kaydırmalı rulet ile süre seç<input type="checkbox" data-k="wheel"></label></section>';
+  h += '<section><h3>Casino çarkı <span class="plus prem">PREMIUM</span></h3><label>Casino çarkı ile süre seç<input type="checkbox" data-k="casino"></label>' + sel('ctheme', ['Çark rengi', Object.entries(CTHEMES).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join('')]) + '</section>';
   h += '<section><h3>Ayarlar</h3><div class="row"><button id="exp">Dışa aktar</button><button id="imp">İçe aktar</button><button id="def">Sıfırla</button></div><input id="jf" type="file" accept=".json" hidden></section>';
   $('#pbody').innerHTML = h.replace('<section></section>', ''); fill();
 }
@@ -249,4 +292,4 @@ $('#panel').addEventListener('change', e => {
   } else if (e.target.id === 'jf') f.text().then(t => { try { const j = JSON.parse(t); for (const k in DEF) if (k in j && typeof j[k] === typeof DEF[k]) S[k] = j[k]; fill(); apply(); save(); } catch (_) { alert('Geçersiz ayar dosyası.'); } });
   e.target.value = '';
 });
-build(); buildWheel(); buildCasino(); apply(); ui();
+build(); buildWheel(); apply(); ui();

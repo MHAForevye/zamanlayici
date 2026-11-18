@@ -96,3 +96,85 @@ body.run #cwheel{pointer-events:none;opacity:.6}
 
 /* --- Tam ekran: yalnızca süre, Duraklat/Tur/Sıfırla ve çıkış düğmesi kalır --- */
 body.fs :is(#modes,#cdset,#laps,#gear,#panel){display:none!important}
+
+#panel .plus.prem{background:linear-gradient(135deg,#f5d77a,#c9972c)}
+
+/* --- Belirgin tam ekran düğmesi --- */
+#tools #fs{background:var(--accent);color:var(--t-acc,#000);border-color:var(--accent);font-weight:600;padding:.55em 1.1em;box-shadow:0 0 18px color-mix(in srgb,var(--accent) 55%,transparent)}
+#tools #fs:hover{filter:brightness(1.12)}
+body.fs #tools #fs{font-size:1.1em;padding:.7em 1.5em}
+
+/* ===== Duyarlı düzen: telefon / tablet / masaüstü, dikey + yatay ===== */
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+button,input,select{touch-action:manipulation}
+#stage,#tools{-webkit-user-select:none;user-select:none}
+#stage input{-webkit-user-select:text;user-select:text}
+
+/* çentik / ev çubuğu payları + sağ üstteki düğmelere yer */
+#stage{--gap:clamp(10px,2.4vh,24px);gap:var(--gap);justify-content:var(--av,center);align-items:var(--ah,center);
+  padding:calc(env(safe-area-inset-top,0px) + max(clamp(16px,4vw,56px),64px)) calc(env(safe-area-inset-right,0px) + clamp(16px,4vw,56px)) calc(env(safe-area-inset-bottom,0px) + clamp(16px,4vw,56px)) calc(env(safe-area-inset-left,0px) + clamp(16px,4vw,56px))}
+@supports (justify-content:safe center){#stage{justify-content:safe var(--av,center);align-items:safe var(--ah,center)}}   /* içerik sığmazsa üstten kırpılmasın, kaydırılsın */
+#tools{top:calc(12px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px))}
+#lcol{display:contents}
+#modes{order:1}#clock{order:2}#cdset{order:3}#ctl{order:4}#laps{order:5}
+
+/* boyutlar ekrana göre */
+#cwsvg{width:min(34vh,78vw,380px)}
+#presets{justify-content:inherit}
+@media(max-width:480px){#presets button{padding:.5em .8em;font-size:.92em}#fs{font-size:.88em}}
+
+/* dokunmatik: büyük hedefler, iOS'ta yakınlaşmayı önleyen 16px yazı */
+@media(pointer:coarse){
+  #stage button,#tools button{min-height:44px}
+  #cdset input{font-size:16px;min-height:44px}
+  #pclose{width:44px;height:44px}
+  #panel button{min-height:42px}
+  #panel label{min-height:44px}
+  #panel input[type=checkbox]{width:24px;height:24px}
+  #panel input[type=color]{width:38px;height:38px}
+}
+
+/* ayar paneli: dikey telefonda alttan açılan sayfa, yatayda yandan */
+#panel{padding-right:env(safe-area-inset-right,0px)}
+#pbody{padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))}
+@media(orientation:landscape) and (max-width:900px){#panel{width:min(360px,56vw)}}
+@media(max-width:640px) and (orientation:portrait){
+  #panel{left:0;right:0;top:auto;bottom:0;width:100%;max-height:52vh;max-height:52dvh;padding-right:0;border-left:0;border-top:1px solid rgba(255,255,255,.14);border-radius:20px 20px 0 0;box-shadow:0 -24px 60px rgba(0,0,0,.5)}
+  #pbody{min-height:0}
+}
+
+/* yatay + geniş (tablet/masaüstü) ya da yatay + alçak (telefon): geri sayımda iki sütun */
+body.two #stage{flex-direction:row;justify-content:flex-start;align-items:var(--av,center);gap:clamp(16px,3vw,48px)}
+@supports (justify-content:safe center){body.two #stage{align-items:safe var(--av,center)}}
+body.two #lcol{display:flex;flex-direction:column;gap:var(--gap);align-items:var(--ah,center);flex:1 1 0;min-width:0;container-type:inline-size}
+body.two #cdset{flex:0 0 auto;flex-direction:column;align-items:center;justify-content:center;max-width:46vw}
+body.two #presets{justify-content:center;flex-wrap:wrap;max-width:min(360px,44vw)}
+body.two #clock{font-size:min(calc(var(--size)*8cqw/var(--n)),calc(var(--size)*1.6vh))}
+body.two #cwsvg{width:min(54vh,36vw,380px)}
+
+/* alçak yatay ekran (telefon): her şeyi sıkıştır */
+body.short #stage{--gap:8px;padding:calc(env(safe-area-inset-top,0px) + 54px) calc(env(safe-area-inset-right,0px) + 20px) calc(env(safe-area-inset-bottom,0px) + 10px) calc(env(safe-area-inset-left,0px) + 20px)}
+body.short #tools{top:calc(6px + env(safe-area-inset-top,0px))}
+body.short .wcol ul{height:120px;padding:40px 0}
+body.short #wheel .band{top:40px}
+body.short #presets button{padding:.35em .8em;min-height:38px}
+body.short #cwheel{display:grid;grid-template-columns:auto auto;align-items:center;justify-items:center;gap:8px 14px}
+body.short #cwsvg{grid-column:1;grid-row:1/span 2;width:min(52vh,34vw)}
+body.short #cfields{grid-column:2;grid-row:1;flex-direction:column}
+body.short #cspin{grid-column:2;grid-row:2}
+
+/* panel açıkken sağ üstteki düğmeler panelin altında kalmasın */
+#tools{transition:opacity .5s,right .25s}
+body.pn #tools{right:calc(env(safe-area-inset-right,0px) + min(360px,100vw) + 12px)}
+@media(orientation:landscape) and (max-width:900px){body.pn #tools{right:calc(env(safe-area-inset-right,0px) + min(360px,56vw) + 12px)}}
+@media(max-width:640px) and (orientation:portrait){body.pn #tools{right:calc(12px + env(safe-area-inset-right,0px))}}
+
+/* küçük ekranlar (iPhone SE vb.): boşluk ve çarkı yüksekliğe göre kıs */
+@media(max-height:700px){#stage{--gap:clamp(6px,1.6vh,10px)}}
+@media(max-height:380px){
+  body.short #stage{padding-top:calc(env(safe-area-inset-top,0px) + 56px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 6px)}
+  body.short #cfields button,body.short #cspin{min-height:34px;padding:.3em .8em}
+  body.short #presets button{min-height:32px;padding:.25em .7em}
+}
