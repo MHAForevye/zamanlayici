@@ -1,0 +1,2 @@
+# zamanlay-c-
+zamanlayıcı.
