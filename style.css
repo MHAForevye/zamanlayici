@@ -1,0 +1,37 @@
+:root{--digit:#fff;--accent:#22d3ee;--font:'Orbitron',monospace;--size:16;--w:600;--sp:2;--glow:20;--n:8}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:15px/1.4 Inter,system-ui,sans-serif;color:var(--digit);background:#000;overflow:hidden}
+#bg,#shade{position:fixed;inset:0}
+#bg{transform:scale(1.08);background-size:cover;background-position:center}
+#stage{position:fixed;inset:0;display:flex;flex-direction:column;gap:clamp(10px,2.4vh,24px);padding:clamp(16px,4vw,56px);overflow:auto}
+#clock{font:var(--w) min(calc(var(--size)*8vw/var(--n)),calc(var(--size)*1.6vh)) /1.05 var(--font);letter-spacing:calc(var(--sp)*1px);font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--digit);text-shadow:0 0 calc(var(--glow)*1px) var(--accent)}
+#clock.done{animation:fl .7s steps(2) 6}
+@keyframes fl{50%{opacity:.15}}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer;border:1.5px solid color-mix(in srgb,var(--accent) 70%,transparent);background:rgba(0,0,0,.28);padding:.55em 1.2em;border-radius:99px;backdrop-filter:blur(6px);transition:background .15s,transform .1s}
+button:hover{background:color-mix(in srgb,var(--accent) 30%,transparent)}
+button:active{transform:scale(.96)}
+button.main,#modes .on{background:var(--accent);border-color:var(--accent);color:#000;font-weight:700}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+#modes,#ctl,#cdset,#presets{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#cdset input{width:4.2em;padding:.4em;border-radius:10px;border:1.5px solid var(--accent);background:rgba(0,0,0,.3);text-align:center}
+#laps{list-style:none;margin:0;padding:0;max-width:26rem;width:100%}
+#laps li{display:flex;justify-content:space-between;gap:1rem;padding:.35em 0;border-bottom:1px solid rgba(255,255,255,.18);font-variant-numeric:tabular-nums}
+#laps b{color:var(--accent)}
+#tools{position:fixed;right:12px;top:12px;display:flex;gap:8px;z-index:5}
+#tools button{padding:.45em .8em}
+#panel{position:fixed;right:0;top:0;bottom:0;width:min(360px,100vw);z-index:9;background:rgba(12,12,16,.86);backdrop-filter:blur(18px);color:#eee;overflow:auto;padding:16px;border-left:1px solid rgba(255,255,255,.12)}
+#panel[hidden]{display:none}
+#panel h3{margin:18px 0 8px;font-size:13px;font-weight:600;opacity:.7}
+#panel label{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:7px 0}
+#panel input[type=range]{flex:1;accent-color:var(--accent)}
+#panel input[type=color]{width:44px;height:30px;border:0;background:none;padding:0}
+#panel select{background:#222;border:1px solid #444;border-radius:8px;padding:.3em}
+#panel output{width:2.6em;text-align:right;opacity:.7}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.chips button{height:44px;padding:0;border-radius:10px;font-size:11px;text-shadow:0 1px 2px #000;color:#fff}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+body.zen.run:not(.act) #modes,body.zen.run:not(.act) #ctl,body.zen.run:not(.act) #tools,body.zen.run:not(.act) #laps,body.zen.run:not(.act) #cdset{opacity:0;pointer-events:none}
+#modes,#ctl,#tools,#laps,#cdset{transition:opacity .5s}
+@media(prefers-reduced-motion:reduce){#clock.done{animation:none}}

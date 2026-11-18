@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Zamanlayıcı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@100..900&family=JetBrains+Mono:wght@100..800&family=Orbitron:wght@400..900&family=Playfair+Display:wght@400..900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="bg"></div><div id="shade"></div>
+<main id="stage">
+  <nav id="modes"><button data-m="sw" class="on">Kronometre</button><button data-m="cd">Geri sayım</button></nav>
+  <div id="clock" aria-live="off">00:00.00</div>
+  <div id="cdset" hidden>
+    <label>sa <input id="th" type="number" min="0" max="99" value="0"></label><label>dk <input id="tm" type="number" min="0" max="999" value="5"></label><label>sn <input id="ts" type="number" min="0" max="59" value="0"></label>
+    <span id="presets"></span>
+  </div>
+  <div id="ctl"><button id="go" class="main">Başlat</button><button id="lap">Tur</button><button id="rst">Sıfırla</button></div>
+  <ol id="laps"></ol>
+</main>
+<div id="tools"><button id="fs" title="Tam ekran (F)" aria-label="Tam ekran">⛶</button><button id="gear" title="Özelleştir" aria-label="Özelleştir">⚙</button></div>
+<aside id="panel" hidden><div id="pbody"></div></aside>
+<script src="app.js"></script>
+</body>
+</html>
