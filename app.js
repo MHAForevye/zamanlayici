@@ -83,7 +83,7 @@ const fsOn = () => !!(document.fullscreenElement || document.webkitFullscreenEle
 function fsUi() {                                              // tam ekranda sade görünüm
   const f = fsOn() || pseudoFs, b = $('#fs');
   document.body.classList.toggle('fs', f); if (f) $('#panel').hidden = true;
-  b.textContent = f ? '⤡ Tam ekrandan çık' : '⛶ Tam ekran'; b.title = b.ariaLabel = f ? 'Tam ekrandan çık (F)' : 'Tam ekran (F)'; layout();
+  b.title = f ? 'Tam ekrandan çık (F)' : 'Tam ekran (F)'; b.setAttribute('aria-label', f ? 'Tam ekrandan çık' : 'Tam ekran'); layout();
 }
 $('#fs').onclick = () => {
   if (fsOn()) xfs.call(document);
@@ -97,7 +97,7 @@ addEventListener('pointerdown', e => {                         // dikey telefond
   if (!$('#panel').hidden && !e.target.closest('#panel,#gear') && matchMedia('(max-width:640px) and (orientation:portrait)').matches) $('#panel').hidden = true;
 });
 addEventListener('keydown', e => {
-  if (e.key === 'Escape') { $('#panel').hidden = true; if (pseudoFs) { pseudoFs = false; fsUi(); } return; }
+  if (e.key === 'Escape') { $('#panel').hidden = true; $('#a2h').hidden = true; if (pseudoFs) { pseudoFs = false; fsUi(); } return; }
   if (/INPUT|SELECT/.test(e.target.tagName)) return; const k = e.key.toLowerCase();
   if (k === ' ') { e.preventDefault(); toggle(); } else if (k === 'l') lap(); else if (k === 'r') reset(); else if (k === 'f') $('#fs').click();
 });
@@ -293,3 +293,37 @@ $('#panel').addEventListener('change', e => {
   e.target.value = '';
 });
 build(); buildWheel(); apply(); ui();
+
+/* ---------- Ana ekrana ekle ---------- */
+const A2 = { done: 'zamanlayici-a2done', last: 'zamanlayici-a2last', first: 5e3, every: 12e4, snooze: 3e5, stay: 12e3 };
+const lsGet = k => { try { return localStorage.getItem(k); } catch (_) { return null; } }, lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (_) {} };
+const installed = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true || lsGet(A2.done) === '1';
+const isiOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1), isAnd = /android/i.test(navigator.userAgent);
+let dip = null, a2tm;
+const a2sync = () => { $('#a2').hidden = installed(); };
+function a2next(ms) { clearTimeout(a2tm); if (!installed()) a2tm = setTimeout(a2show, ms); }
+function a2hide(snooze) { $('#a2b').classList.remove('show'); a2next(snooze ? A2.snooze : A2.every); }
+function a2show() {                                            // eklenene kadar arada bir bildirim gibi düşer
+  if (installed()) return a2sync();
+  if (run || document.hidden || document.body.classList.contains('fs') || !$('#a2h').hidden) return a2next(3e4);
+  $('#a2b').classList.add('show'); lsSet(A2.last, Date.now());
+  clearTimeout(a2tm); a2tm = setTimeout(() => a2hide(), A2.stay);
+}
+function a2help() {                                            // tarayıcı doğrudan kurulum sunmuyorsa adımları göster
+  const L = isiOS ? ['Alttaki <b>Paylaş</b> düğmesine dokun (kare ve yukarı ok simgesi).', 'Listeyi kaydırıp <b>Ana Ekrana Ekle</b>’yi seç.', 'Sağ üstteki <b>Ekle</b>’ye dokun.']
+    : isAnd ? ['Tarayıcının sağ üstündeki <b>⋮</b> menüsünü aç.', '<b>Ana ekrana ekle</b> ya da <b>Uygulamayı yükle</b>’ye dokun.', '<b>Ekle</b>’yi onayla.']
+    : ['Adres çubuğunun sağındaki <b>yükle</b> simgesine tıkla ya da tarayıcı menüsünden <b>Uygulamayı yükle</b>’yi seç.', 'Açılan pencerede <b>Yükle</b>’yi onayla.'];
+  $('#a2s').innerHTML = L.map(x => `<li>${x}</li>`).join(''); $('#a2h').hidden = false; $('#a2ok').focus();
+}
+async function a2add() {
+  a2hide();
+  if (!dip) return a2help();
+  const p = dip; dip = null;
+  try { p.prompt(); if ((await p.userChoice).outcome === 'accepted') { lsSet(A2.done, '1'); a2sync(); } } catch (_) { a2help(); }
+}
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); dip = e; });
+addEventListener('appinstalled', () => { dip = null; lsSet(A2.done, '1'); $('#a2b').classList.remove('show'); clearTimeout(a2tm); a2sync(); });
+$('#a2').onclick = a2add; $('#a2add').onclick = a2add; $('#a2x').onclick = () => a2hide(true);
+$('#a2h').addEventListener('click', e => { if (e.target.id === 'a2h' || e.target.id === 'a2ok') $('#a2h').hidden = true; });
+a2sync(); a2next(Math.max(A2.first, A2.every - (Date.now() - (+lsGet(A2.last) || 0))));
+if ('serviceWorker' in navigator && location.protocol !== 'file:') addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));

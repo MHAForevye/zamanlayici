@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Zamanlayıcı</title>
 <meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Zamanlayıcı">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,8 +30,14 @@
     <span id="presets"></span>
   </div>
 </main>
-<div id="tools"><button id="fs" title="Tam ekran (F)" aria-label="Tam ekran">⛶ Tam ekran</button><button id="gear" title="Özelleştir" aria-label="Özelleştir">⚙</button></div>
+<div id="tools">
+  <button id="a2" hidden title="Ana ekrana ekle" aria-label="Ana ekrana ekle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19"/><path d="M12 8v6M9 11h6"/></svg><span>Ana ekrana ekle</span></button>
+  <button id="fs" title="Tam ekran (F)" aria-label="Tam ekran"><svg class="i-in" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square" aria-hidden="true"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><svg class="i-out" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square" aria-hidden="true"><path d="M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5"/></svg></button>
+  <button id="gear" title="Özelleştir" aria-label="Özelleştir">⚙</button>
+</div>
 <aside id="panel" hidden aria-label="Özelleştirme"><header><span>Özelleştir</span><button id="pclose" aria-label="Paneli kapat">✕</button></header><div id="pbody"></div></aside>
+<div id="a2b" role="status" aria-live="polite"><span><b>Ana ekrana ekle</b>Daha hızlı ulaşmak için tek dokunuşla ana ekranına sabitle.</span><button id="a2add">Ekle</button><button id="a2x" aria-label="Kapat">✕</button></div>
+<div id="a2h" hidden role="dialog" aria-modal="true" aria-labelledby="a2title"><div><h2 id="a2title">Ana ekrana ekle</h2><ol id="a2s"></ol><button id="a2ok">Tamam</button></div></div>
 <script src="app.js"></script>
 </body>
 </html>

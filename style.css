@@ -1,4 +1,4 @@
-:root{--digit:#fff;--accent:#22d3ee;--font:'Orbitron',monospace;--size:16;--w:600;--sp:2;--glow:20;--n:8}
+:root{--digit:#fff;--accent:#22d3ee;--font:'Orbitron',monospace;--size:16;--w:600;--sp:2;--glow:20;--n:8;--r:4px}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{font:15px/1.4 Inter,system-ui,sans-serif;color:var(--digit);background:#000;overflow:hidden}
@@ -9,7 +9,7 @@ body{font:15px/1.4 Inter,system-ui,sans-serif;color:var(--digit);background:#000
 #clock.done{animation:fl .7s steps(2) 6}
 @keyframes fl{50%{opacity:.15}}
 button,input,select{font:inherit;color:inherit}
-#stage button,#tools button{cursor:pointer;--c:var(--accent);--t:#fff;border:1.5px solid var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);color:var(--digit);padding:.55em 1.2em;border-radius:99px;backdrop-filter:blur(6px);transition:filter .15s,transform .1s}
+#stage button,#tools button{cursor:pointer;--c:var(--accent);--t:#fff;border:1.5px solid var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);color:var(--digit);padding:.55em 1.2em;border-radius:var(--r);backdrop-filter:blur(6px);transition:filter .15s,transform .1s,opacity .5s}
 #stage button:hover{filter:brightness(1.18)}
 #stage button:active{transform:scale(.96)}
 #go{--c:var(--c-go);--t:var(--t-go);font-weight:600}
@@ -23,24 +23,23 @@ body[data-bs=line] #stage button{background:transparent;color:var(--c)}
 #tools button{background:rgba(0,0,0,.35);color:#fff;border-color:rgba(255,255,255,.3)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 #modes,#ctl,#cdset,#presets{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-#cdset input{width:4.2em;padding:.4em;border-radius:10px;border:1.5px solid var(--c-pre);background:rgba(0,0,0,.3);text-align:center}
+#cdset input{width:4.2em;padding:.4em;border-radius:var(--r);border:1.5px solid var(--c-pre);background:rgba(0,0,0,.3);text-align:center}
 #laps{list-style:none;margin:0;padding:0;max-width:26rem;width:100%}
 #laps li{display:flex;justify-content:space-between;gap:1rem;padding:.35em 0;border-bottom:1px solid rgba(255,255,255,.18);font-variant-numeric:tabular-nums}
 #laps b{color:var(--accent)}
-#tools{position:fixed;right:12px;top:12px;display:flex;gap:8px;z-index:5}
-#tools button{padding:.45em .8em}
+#tools{position:fixed;right:12px;top:12px;display:flex;gap:8px;align-items:center;z-index:5}
 #panel{position:fixed;right:0;top:0;bottom:0;width:min(360px,100vw);z-index:9;background:rgba(12,12,16,.86);backdrop-filter:blur(18px);color:#eee;overflow:auto;padding:16px;border-left:1px solid rgba(255,255,255,.12)}
 #panel[hidden]{display:none}
 #panel h3{margin:18px 0 8px;font-size:13px;font-weight:600;opacity:.7}
 #panel label{display:flex;justify-content:space-between;align-items:center;gap:10px;margin:7px 0}
 #panel input[type=range]{flex:1;accent-color:var(--accent)}
 #panel input[type=color]{width:44px;height:30px;border:0;background:none;padding:0}
-#panel select{background:#222;border:1px solid #444;border-radius:8px;padding:.3em}
+#panel select{background:#222;border:1px solid #444;border-radius:var(--r);padding:.3em}
 #panel output{width:2.6em;text-align:right;opacity:.7}
 .chips{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.chips button{height:44px;padding:0;border-radius:10px;font-size:11px;text-shadow:0 1px 2px #000;color:#fff}
+.chips button{height:44px;padding:0;border-radius:var(--r);font-size:11px;text-shadow:0 1px 2px #000;color:#fff}
 .row{display:flex;gap:8px;flex-wrap:wrap}
-body.zen.run:not(.act) #modes,body.zen.run:not(.act) #ctl,body.zen.run:not(.act) #tools,body.zen.run:not(.act) #laps,body.zen.run:not(.act) #cdset{opacity:0;pointer-events:none}
+body.zen.run:not(.act) #modes,body.zen.run:not(.act) #ctl,body.zen.run:not(.act) #tools>:not(#fs),body.zen.run:not(.act) #laps,body.zen.run:not(.act) #cdset{opacity:0;pointer-events:none}
 #modes,#ctl,#tools,#laps,#cdset{transition:opacity .5s}
 @media(prefers-reduced-motion:reduce){#clock.done{animation:none}}
 
@@ -48,20 +47,20 @@ body.zen.run:not(.act) #modes,body.zen.run:not(.act) #ctl,body.zen.run:not(.act)
 #panel{display:flex;flex-direction:column;padding:0;font-size:14px;background:rgba(18,18,22,.94);box-shadow:-24px 0 60px rgba(0,0,0,.45)}
 #panel[hidden]{display:none}
 #panel>header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.08);font-size:16px;font-weight:600}
-#pclose{width:34px;height:34px;padding:0;border-radius:50%}
+#pclose{width:34px;height:34px;padding:0;border-radius:var(--r)}
 #pbody{overflow:auto;padding:4px 14px 28px}
-#panel section{margin-top:14px;padding:10px 14px 12px;background:rgba(255,255,255,.045);border-radius:14px}
+#panel section{margin-top:14px;padding:10px 14px 12px;background:rgba(255,255,255,.045);border-radius:6px}
 #panel section:empty{display:none}
 #panel h3{margin:0 0 4px;font-size:12px;font-weight:600;opacity:.6}
 #panel label{min-height:36px;margin:2px 0}
-#panel button{cursor:pointer;color:#eee;background:#26262c;border:1px solid #3a3a42;border-radius:10px;padding:.45em .9em;backdrop-filter:none}
+#panel button{cursor:pointer;color:#eee;background:#26262c;border:1px solid #3a3a42;border-radius:var(--r);padding:.45em .9em;backdrop-filter:none}
 #panel button:hover{background:#31313a}
-#panel input[type=color]{-webkit-appearance:none;appearance:none;width:30px;height:30px;padding:0;border:2px solid rgba(255,255,255,.4);border-radius:50%;overflow:hidden;cursor:pointer}
+#panel input[type=color]{-webkit-appearance:none;appearance:none;width:30px;height:30px;padding:0;border:2px solid rgba(255,255,255,.4);border-radius:var(--r);overflow:hidden;cursor:pointer}
 #panel input[type=color]::-webkit-color-swatch-wrapper{padding:0}
-#panel input[type=color]::-webkit-color-swatch,#panel input[type=color]::-moz-color-swatch{border:0;border-radius:50%}
+#panel input[type=color]::-webkit-color-swatch,#panel input[type=color]::-moz-color-swatch{border:0;border-radius:2px}
 #panel input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent)}
 .chips{grid-template-columns:repeat(2,1fr)}
-#panel .chips button{height:70px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;border:1px solid rgba(255,255,255,.2);border-radius:12px;text-shadow:none}
+#panel .chips button{height:70px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;border:1px solid rgba(255,255,255,.2);border-radius:var(--r);text-shadow:none}
 .chips .sw{font-size:24px;line-height:1}
 .chips small{font-size:11px;opacity:.8}
 
@@ -69,17 +68,17 @@ body.zen.run:not(.act) #modes,body.zen.run:not(.act) #ctl,body.zen.run:not(.act)
 #nums{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 #nums[hidden],#wheel[hidden]{display:none}
 #wheel{position:relative;display:flex;gap:14px;align-items:flex-start;padding:0 10px;transition:opacity .3s}
-#wheel .band{position:absolute;left:0;right:0;top:60px;height:40px;border-radius:12px;border:1.5px solid var(--c-pre);background:color-mix(in srgb,var(--c-pre) 12%,transparent);pointer-events:none}
+#wheel .band{position:absolute;left:0;right:0;top:60px;height:40px;border-radius:var(--r);border:1.5px solid var(--c-pre);background:color-mix(in srgb,var(--c-pre) 12%,transparent);pointer-events:none}
 .wcol{display:flex;flex-direction:column;align-items:center;gap:4px;position:relative}
 .wcol ul{list-style:none;margin:0;padding:60px 0;height:160px;overflow-y:auto;scroll-snap-type:y mandatory;scrollbar-width:none;overscroll-behavior:contain;outline:none;-webkit-mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent)}
 .wcol ul::-webkit-scrollbar{display:none}
-.wcol ul:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:12px}
+.wcol ul:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:var(--r)}
 .wcol li{height:40px;line-height:40px;min-width:3.2em;text-align:center;scroll-snap-align:center;font-size:1.3rem;font-variant-numeric:tabular-nums;opacity:.35;cursor:pointer;transition:opacity .15s,transform .15s}
 .wcol li.sel{opacity:1;transform:scale(1.15);font-weight:600}
 .wcol small{opacity:.7}
 body.run #wheel{pointer-events:none;opacity:.6}
 body.zen.run:not(.act) #wheel{opacity:0}
-#panel .plus{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:99px;background:var(--accent);color:#000;font-size:10px;letter-spacing:.06em;vertical-align:1px}
+#panel .plus{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:3px;background:var(--accent);color:#000;font-size:10px;letter-spacing:.06em;vertical-align:1px}
 
 /* --- Casino çarkı (Plus) --- */
 #cwheel{display:flex;flex-direction:column;align-items:center;gap:12px;transition:opacity .3s}
@@ -95,14 +94,26 @@ body[data-bs=fill] #cspin{background:var(--c);color:var(--t)}
 body.run #cwheel{pointer-events:none;opacity:.6}
 
 /* --- Tam ekran: yalnızca süre, Duraklat/Tur/Sıfırla ve çıkış düğmesi kalır --- */
-body.fs :is(#modes,#cdset,#laps,#gear,#panel){display:none!important}
+body.fs :is(#modes,#cdset,#laps,#gear,#panel,#a2,#a2b,#a2h){display:none!important}
 
 #panel .plus.prem{background:linear-gradient(135deg,#f5d77a,#c9972c)}
 
-/* --- Belirgin tam ekran düğmesi --- */
-#tools #fs{background:var(--accent);color:var(--t-acc,#000);border-color:var(--accent);font-weight:600;padding:.55em 1.1em;box-shadow:0 0 18px color-mix(in srgb,var(--accent) 55%,transparent)}
+/* --- Üst düğmeler: yazısız ve belirgin tam ekran, ana ekrana ekle --- */
+#tools button{display:inline-flex;align-items:center;justify-content:center;gap:.5em;min-height:42px;line-height:1}
+#tools #gear{width:42px;padding:0;font-size:1.25em}
+#tools #a2{padding:0 .9em;font-size:.92em;font-weight:500;white-space:nowrap}
+#tools #a2 svg{width:18px;height:18px;flex:none}
+#tools #fs{width:46px;height:46px;min-height:46px;padding:0;background:var(--accent);color:var(--t-acc,#000);border:2px solid var(--t-acc,#000);box-shadow:0 0 0 2px var(--accent),0 0 0 2px transparent,0 0 22px color-mix(in srgb,var(--accent) 65%,transparent)}
+#tools #fs svg{width:24px;height:24px;display:block}
+#tools #fs .i-out,body.fs #tools #fs .i-in{display:none}
+body.fs #tools #fs .i-out{display:block}
 #tools #fs:hover{filter:brightness(1.12)}
-body.fs #tools #fs{font-size:1.1em;padding:.7em 1.5em}
+body.fs #tools #fs{width:52px;height:52px;min-height:52px}
+body:not(.run) #tools #fs{animation:fsp 3.6s ease-out infinite}
+@keyframes fsp{
+  0%{box-shadow:0 0 0 2px var(--accent),0 0 0 2px color-mix(in srgb,var(--accent) 70%,transparent),0 0 22px color-mix(in srgb,var(--accent) 65%,transparent)}
+  60%,100%{box-shadow:0 0 0 2px var(--accent),0 0 0 16px transparent,0 0 22px color-mix(in srgb,var(--accent) 65%,transparent)}
+}
 
 /* ===== Duyarlı düzen: telefon / tablet / masaüstü, dikey + yatay ===== */
 [hidden]{display:none!important}
@@ -123,7 +134,7 @@ button,input,select{touch-action:manipulation}
 /* boyutlar ekrana göre */
 #cwsvg{width:min(34vh,78vw,380px)}
 #presets{justify-content:inherit}
-@media(max-width:480px){#presets button{padding:.5em .8em;font-size:.92em}#fs{font-size:.88em}}
+@media(max-width:480px){#presets button{padding:.5em .8em;font-size:.92em}}
 
 /* dokunmatik: büyük hedefler, iOS'ta yakınlaşmayı önleyen 16px yazı */
 @media(pointer:coarse){
@@ -141,7 +152,7 @@ button,input,select{touch-action:manipulation}
 #pbody{padding-bottom:calc(28px + env(safe-area-inset-bottom,0px))}
 @media(orientation:landscape) and (max-width:900px){#panel{width:min(360px,56vw)}}
 @media(max-width:640px) and (orientation:portrait){
-  #panel{left:0;right:0;top:auto;bottom:0;width:100%;max-height:52vh;max-height:52dvh;padding-right:0;border-left:0;border-top:1px solid rgba(255,255,255,.14);border-radius:20px 20px 0 0;box-shadow:0 -24px 60px rgba(0,0,0,.5)}
+  #panel{left:0;right:0;top:auto;bottom:0;width:100%;max-height:52vh;max-height:52dvh;padding-right:0;border-left:0;border-top:1px solid rgba(255,255,255,.14);border-radius:10px 10px 0 0;box-shadow:0 -24px 60px rgba(0,0,0,.5)}
   #pbody{min-height:0}
 }
 
@@ -178,3 +189,19 @@ body.pn #tools{right:calc(env(safe-area-inset-right,0px) + min(360px,100vw) + 12
   body.short #cfields button,body.short #cspin{min-height:34px;padding:.3em .8em}
   body.short #presets button{min-height:32px;padding:.25em .7em}
 }
+
+/* --- Ana ekrana ekle: bildirim gibi düşen şerit ve yardım penceresi --- */
+#a2b{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top,0px));z-index:20;width:min(440px,calc(100vw - 20px));display:flex;align-items:center;gap:10px;padding:10px 10px 10px 14px;background:rgba(18,18,22,.95);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:#f2f2f2;border:1px solid rgba(255,255,255,.14);border-left:4px solid var(--accent);border-radius:var(--r);box-shadow:0 14px 40px rgba(0,0,0,.5);transform:translate(-50%,-170%);opacity:0;visibility:hidden;transition:transform .5s cubic-bezier(.2,.9,.3,1.15),opacity .3s,visibility 0s .5s}
+#a2b.show{transform:translate(-50%,0);opacity:1;visibility:visible;transition:transform .5s cubic-bezier(.2,.9,.3,1.15),opacity .3s,visibility 0s}
+#a2b span{flex:1;min-width:0;line-height:1.3;font-size:12.5px;opacity:.9}
+#a2b b{display:block;font-size:14.5px;opacity:1}
+#a2b button,#a2h button{cursor:pointer;min-height:40px;padding:.4em 1em;color:#fff;background:#26262c;border:1px solid #3a3a42;border-radius:var(--r)}
+#a2b button:hover,#a2h button:hover{filter:brightness(1.2)}
+#a2b #a2add,#a2h #a2ok{background:var(--accent);border-color:var(--accent);color:var(--t-acc,#000);font-weight:600}
+#a2b #a2x{width:40px;padding:0}
+#a2h{position:fixed;inset:0;z-index:30;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.6)}
+#a2h>div{width:min(380px,100%);max-height:100%;overflow:auto;padding:18px 18px 16px;background:#16161b;color:#eee;border:1px solid rgba(255,255,255,.14);border-top:3px solid var(--accent);border-radius:var(--r);box-shadow:0 24px 70px rgba(0,0,0,.6)}
+#a2h h2{margin:0 0 10px;font-size:17px}
+#a2h ol{margin:0 0 14px;padding-left:1.3em;line-height:1.55}
+#a2h li{margin:4px 0}
+@media(prefers-reduced-motion:reduce){#tools #fs{animation:none!important}#a2b,#a2b.show{transition:none}}
