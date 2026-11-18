@@ -80,3 +80,19 @@ body.zen.run:not(.act) #modes,body.zen.run:not(.act) #ctl,body.zen.run:not(.act)
 body.run #wheel{pointer-events:none;opacity:.6}
 body.zen.run:not(.act) #wheel{opacity:0}
 #panel .plus{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:99px;background:var(--accent);color:#000;font-size:10px;letter-spacing:.06em;vertical-align:1px}
+
+/* --- Casino çarkı (Plus) --- */
+#cwheel{display:flex;flex-direction:column;align-items:center;gap:12px;transition:opacity .3s}
+#cwheel[hidden]{display:none}
+#cfields{display:flex;gap:8px}
+#cfields button{--c:var(--c-pre);--t:var(--t-pre);display:flex;gap:.3em;align-items:baseline}
+#cfields .on{background:var(--c)!important;color:var(--t)!important;font-weight:600}
+#cwsvg{width:min(62vh,78vw,320px);height:auto;touch-action:none;cursor:grab;border-radius:50%;filter:drop-shadow(0 10px 22px rgba(0,0,0,.45));outline:none}
+#cwsvg:active{cursor:grabbing}
+#cwsvg:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+#cspin{--c:var(--c-go);--t:var(--t-go);font-weight:600}
+body[data-bs=fill] #cspin{background:var(--c);color:var(--t)}
+body.run #cwheel{pointer-events:none;opacity:.6}
+
+/* --- Tam ekran: yalnızca süre, Duraklat/Tur/Sıfırla ve çıkış düğmesi kalır --- */
+body.fs :is(#modes,#cdset,#laps,#gear,#panel){display:none!important}

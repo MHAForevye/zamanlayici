@@ -1,6 +1,6 @@
 'use strict';
 const $ = s => document.querySelector(s), KEY = 'zamanlayici-v1';
-const DEF = { digit:'#e8fbff', accent:'#22d3ee', bg1:'#0f172a', bg2:'#1e1b4b', angle:135, dim:0, blur:0, size:16, weight:600, spacing:2, glow:20, font:'Orbitron', pos:'cc', ms:true, sound:true, zen:false, wheel:false, img:'', cgo:'#22d3ee', clap:'#22d3ee', crst:'#22d3ee', ctab:'#22d3ee', cpre:'#22d3ee', bs:'line' };
+const DEF = { digit:'#e8fbff', accent:'#22d3ee', bg1:'#0f172a', bg2:'#1e1b4b', angle:135, dim:0, blur:0, size:16, weight:600, spacing:2, glow:20, font:'Orbitron', pos:'cc', ms:true, sound:true, zen:false, wheel:false, wstyle:'drum', img:'', cgo:'#22d3ee', clap:'#22d3ee', crst:'#22d3ee', ctab:'#22d3ee', cpre:'#22d3ee', bs:'line' };
 const mk = (n, d, a, b1, b2, font, w, g, ang, b, bs) => [n, { digit:d, accent:a, bg1:b1, bg2:b2, font, weight:w, glow:g, angle:ang, dim:0, blur:0, cgo:b[0], clap:b[1], crst:b[2], ctab:b[3], cpre:b[4], bs }];
 const THEMES = [
   mk('Obsidyen', '#f3e7c9', '#c9a45c', '#0b0b0d', '#1c1812', 'Cormorant Garamond', 300, 8, 160, ['#c9a45c', '#8a7545', '#8a7545', '#c9a45c', '#6b5a38'], 'line'),
@@ -37,7 +37,7 @@ function apply() {
   $('#bg').style.filter = `blur(${S.blur}px)`; $('#shade').style.background = `rgba(0,0,0,${S.dim / 100})`;
   const st = $('#stage').style; st.justifyContent = A.v[S.pos[0]]; st.alignItems = A.h[S.pos[1]]; st.textAlign = { l:'left', c:'center', r:'right' }[S.pos[1]];
   document.body.classList.toggle('zen', S.zen);
-  $('#nums').hidden = S.wheel; $('#wheel').hidden = !S.wheel; syncWheel(); tick();
+  $('#nums').hidden = S.wheel; $('#wheel').hidden = !(S.wheel && S.wstyle !== 'casino'); $('#cwheel').hidden = !(S.wheel && S.wstyle === 'casino'); syncWheel(); tick();
 }
 
 /* ---------- Zaman mantığı ---------- */
@@ -77,6 +77,11 @@ $('#go').onclick = toggle; $('#rst').onclick = reset; $('#lap').onclick = lap;
 $('#presets').innerHTML = [1, 5, 10, 25, 45].map(m => `<button data-m="${m}">${m} dk</button>`).join('');
 $('#presets').onclick = e => { const m = e.target.dataset.m; if (!m) return; $('#th').value = 0; $('#tm').value = m; $('#ts').value = 0; setDur(); syncWheel(); };
 $('#fs').onclick = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.();
+document.addEventListener('fullscreenchange', () => {          // tam ekranda sade görünüm
+  const f = !!document.fullscreenElement, b = $('#fs');
+  document.body.classList.toggle('fs', f); if (f) $('#panel').hidden = true;
+  b.textContent = f ? '⤡' : '⛶'; b.title = b.ariaLabel = f ? 'Tam ekrandan çık (F)' : 'Tam ekran (F)';
+});
 $('#gear').onclick = () => $('#panel').hidden = !$('#panel').hidden;
 addEventListener('keydown', e => {
   if (e.key === 'Escape') { $('#panel').hidden = true; return; }
@@ -102,6 +107,7 @@ function syncWheel() {                                          // sayı kutular
   const t = (+$('#th').value || 0) * 3600 + (+$('#tm').value || 0) * 60 + (+$('#ts').value || 0);
   $('#th').value = Math.min(99, t / 3600 | 0); $('#tm').value = t % 3600 / 60 | 0; $('#ts').value = t % 60;
   document.querySelectorAll('#wheel ul').forEach(u => { u.scrollTop = $('#' + u.dataset.id).value * WH; mark(u); });
+  syncCasino();
 }
 function commitWheel(u) {
   if (run) return syncWheel();                                  // çalışırken süre değişmesin
@@ -121,6 +127,84 @@ $('#wheel').addEventListener('keydown', e => {
   e.preventDefault(); const u = e.target; u.scrollTo({ top: (wIdx(u) + (e.key === 'ArrowDown' ? 1 : -1)) * WH, behavior: 'smooth' });
 });
 
+/* ---------- Casino çarkı (Plus) ---------- */
+const cw = { a: 0, cf: 'tm', raf: 0, busy: false, drag: null }, CL = { th: 'sa', tm: 'dk', ts: 'sn' };
+const polar = (r, a) => [150 + r * Math.sin(a * Math.PI / 180), 150 - r * Math.cos(a * Math.PI / 180)];
+const cVal = a => ((Math.round(-a / 6) % 60) + 60) % 60;       // işaretçinin (üst) altındaki cep
+function buildCasino() {
+  let w = '';
+  for (let i = 0; i < 60; i++) {
+    const a0 = (i - .5) * 6, a1 = (i + .5) * 6, [x0, y0] = polar(124, a0), [x1, y1] = polar(124, a1), [x2, y2] = polar(72, a1), [x3, y3] = polar(72, a0);
+    w += `<path d="M${x0} ${y0}A124 124 0 0 1 ${x1} ${y1}L${x2} ${y2}A72 72 0 0 0 ${x3} ${y3}Z" fill="${i === 0 ? '#0b7a3b' : i % 2 ? '#c0392b' : '#141414'}" stroke="#c9a45c" stroke-width=".6"/>` +
+         `<text x="150" y="44" transform="rotate(${i * 6} 150 150)" text-anchor="middle" dominant-baseline="central" font-size="8.5" font-weight="600" fill="#fff" font-family="Inter,system-ui,sans-serif">${i}</text>`;
+  }
+  $('#cwheel').innerHTML = `<div id="cfields">${Object.entries(CL).map(([f, l]) => `<button data-f="${f}"><b></b> ${l}</button>`).join('')}</div>
+<svg id="cwsvg" viewBox="0 0 300 300" tabindex="0" role="slider" aria-label="Casino çarkı">
+<defs><radialGradient id="cwood" cx="50%" cy="40%" r="70%"><stop offset="0" stop-color="#8a5a33"/><stop offset="1" stop-color="#2b190d"/></radialGradient>
+<radialGradient id="ctrack" cx="50%" cy="50%" r="50%"><stop offset=".9" stop-color="#33333a"/><stop offset="1" stop-color="#1b1b20"/></radialGradient>
+<radialGradient id="cball" cx="35%" cy="30%" r="70%"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#9a9a9a"/></radialGradient></defs>
+<circle cx="150" cy="150" r="148" fill="url(#cwood)" stroke="#c9a45c" stroke-width="2"/>
+<circle cx="150" cy="150" r="138" fill="url(#ctrack)" stroke="#c9a45c" stroke-width="1.5"/>
+<g id="cwrot">${w}<circle cx="150" cy="150" r="72" fill="#3a2a14" stroke="#c9a45c" stroke-width="2"/>${[0, 90].map(a => `<line x1="150" y1="84" x2="150" y2="216" transform="rotate(${a} 150 150)" stroke="#c9a45c" stroke-width="3" stroke-linecap="round"/>`).join('')}</g>
+<circle cx="150" cy="150" r="124" fill="none" stroke="#c9a45c" stroke-width="1.5"/>
+<polygon points="150,22 141,4 159,4" fill="#e0b85c" stroke="#7a5a1c"/>
+<circle id="cwb" r="4.6" fill="url(#cball)" stroke="rgba(0,0,0,.3)" stroke-width=".5"/>
+<circle cx="150" cy="150" r="44" fill="#0d0d0f" stroke="#c9a45c" stroke-width="2"/>
+<text id="cwval" x="150" y="148" text-anchor="middle" dominant-baseline="central" font-size="34" font-weight="700" fill="#f3e7c9" style="font-family:var(--font)">00</text>
+<text id="cwlab" x="150" y="177" text-anchor="middle" font-size="11" fill="#c9a45c" font-family="Inter,system-ui,sans-serif">dk</text></svg>
+<button id="cspin">Çevir</button>`;
+  placeBall();
+}
+function placeBall(a = 0, r = 116) { const [x, y] = polar(r, a), b = $('#cwb'); b.setAttribute('cx', x); b.setAttribute('cy', y); }
+function cFields() {
+  document.querySelectorAll('#cfields button').forEach(b => { b.firstElementChild.textContent = p2($('#' + b.dataset.f).value); b.classList.toggle('on', b.dataset.f === cw.cf); });
+  $('#cwlab').textContent = CL[cw.cf];
+}
+function setA(a, silent) {                                     // çarkı döndür; sessizse süreye yazma
+  cw.a = a; $('#cwrot').setAttribute('transform', `rotate(${a} 150 150)`);
+  const v = cVal(a), inp = $('#' + cw.cf); $('#cwval').textContent = p2(v);
+  if (!silent && !run && +inp.value !== v) { inp.value = v; setDur(); cFields(); }
+}
+function animC(to, dur, ball, silent) {
+  cancelAnimationFrame(cw.raf); const from = cw.a, t0 = performance.now(), B = ball ? 360 * (5 + (Math.random() * 3 | 0)) : 0; cw.busy = !silent;
+  const step = n => {
+    const t = Math.min(1, (n - t0) / dur), e = 1 - (1 - t) ** (ball ? 4 : 3);
+    setA(from + (to - from) * e, silent);
+    ball ? placeBall(-B * e, 130 - 14 * Math.min(1, Math.max(0, (t - .7) / .3)) ** 2) : placeBall();   // top çarkın tersine döner, sonunda cebe düşer
+    if (t < 1) cw.raf = requestAnimationFrame(step); else { cw.busy = false; if (!silent) cFields(); }
+  };
+  cw.raf = requestAnimationFrame(step);
+}
+function syncCasino() {                                        // sayı kutularındaki değeri çarka yansıt
+  cFields(); if (cw.drag || cw.busy) return;
+  const v = (+$('#' + cw.cf).value || 0) % 60, base = -v * 6, k = Math.round((cw.a - base) / 360);
+  animC(base + k * 360, 450, false, true);
+}
+const cA = e => { const r = $('#cwsvg').getBoundingClientRect(); return Math.atan2(e.clientX - r.left - r.width / 2, -(e.clientY - r.top - r.height / 2)) * 180 / Math.PI; };
+const stopC = () => { cancelAnimationFrame(cw.raf); cw.busy = false; placeBall(); };
+$('#cwheel').addEventListener('pointerdown', e => {
+  if (run || !e.target.closest('#cwsvg')) return;
+  stopC(); $('#cwsvg').setPointerCapture(e.pointerId); cw.drag = { a: cA(e), t: performance.now(), v: 0 };
+});
+$('#cwheel').addEventListener('pointermove', e => {
+  const d = cw.drag; if (!d) return; const a = cA(e), n = performance.now(), da = (a - d.a + 540) % 360 - 180;
+  d.v = .7 * d.v + .3 * da / Math.max(1, n - d.t); d.a = a; d.t = n; setA(cw.a + da);
+});
+const cEnd = () => {                                           // bırakınca ivmeyle kayıp en yakın cebe oturur
+  const d = cw.drag; if (!d) return; cw.drag = null;
+  animC(Math.round((cw.a + d.v * 220) / 6) * 6, 500 + Math.min(1500, Math.abs(d.v) * 900));
+};
+$('#cwheel').addEventListener('pointerup', cEnd); $('#cwheel').addEventListener('pointercancel', cEnd);
+$('#cwheel').addEventListener('click', e => {
+  if (run) return; const f = e.target.closest('#cfields button');
+  if (f) { stopC(); cw.cf = f.dataset.f; syncCasino(); }
+  else if (e.target.closest('#cspin')) { stopC(); animC(Math.round(cw.a / 6) * 6 + 360 * (4 + (Math.random() * 3 | 0)) + (Math.random() * 60 | 0) * 6, 5500, true); }
+});
+$('#cwheel').addEventListener('keydown', e => {
+  if (run || !e.target.closest('#cwsvg') || (e.key !== 'ArrowUp' && e.key !== 'ArrowDown')) return;
+  e.preventDefault(); stopC(); animC(Math.round(cw.a / 6) * 6 + (e.key === 'ArrowUp' ? -6 : 6), 150);
+});
+
 /* ---------- Özelleştirme paneli ---------- */
 function build() {
   const sel = (k, o) => `<label>${o[0]}<select data-k="${k}">${o[1]}</select></label>`;
@@ -137,7 +221,7 @@ function build() {
   }
   h += sel('font', ['Yazı tipi', FONTS.map(f => `<option>${f}</option>`).join('')]) + sel('pos', ['Konum', Object.entries(POS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')]);
   h += '</section><section><h3>Davranış</h3><label>Salise göster<input type="checkbox" data-k="ms"></label><label>Bitince ses çal<input type="checkbox" data-k="sound"></label><label>Çalışırken arayüzü gizle<input type="checkbox" data-k="zen"></label></section>';
-  h += '<section><h3>Zaman seçimi <span class="plus">PLUS</span></h3><label>Rulet ile süre seç<input type="checkbox" data-k="wheel"></label></section>';
+  h += '<section><h3>Zaman seçimi <span class="plus">PLUS</span></h3><label>Rulet ile süre seç<input type="checkbox" data-k="wheel"></label>' + sel('wstyle', ['Rulet tipi', '<option value="drum">Kaydırmalı</option><option value="casino">Casino çarkı</option>']) + '</section>';
   h += '<section><h3>Ayarlar</h3><div class="row"><button id="exp">Dışa aktar</button><button id="imp">İçe aktar</button><button id="def">Sıfırla</button></div><input id="jf" type="file" accept=".json" hidden></section>';
   $('#pbody').innerHTML = h.replace('<section></section>', ''); fill();
 }
@@ -165,4 +249,4 @@ $('#panel').addEventListener('change', e => {
   } else if (e.target.id === 'jf') f.text().then(t => { try { const j = JSON.parse(t); for (const k in DEF) if (k in j && typeof j[k] === typeof DEF[k]) S[k] = j[k]; fill(); apply(); save(); } catch (_) { alert('Geçersiz ayar dosyası.'); } });
   e.target.value = '';
 });
-build(); buildWheel(); apply(); ui();
+build(); buildWheel(); buildCasino(); apply(); ui();
