@@ -14,7 +14,8 @@
   <nav id="modes"><button data-m="sw" class="on">Kronometre</button><button data-m="cd">Geri sayım</button></nav>
   <div id="clock" aria-live="off">00:00.00</div>
   <div id="cdset" hidden>
-    <label>sa <input id="th" type="number" min="0" max="99" value="0"></label><label>dk <input id="tm" type="number" min="0" max="999" value="5"></label><label>sn <input id="ts" type="number" min="0" max="59" value="0"></label>
+    <span id="nums"><label>sa <input id="th" type="number" min="0" max="99" value="0"></label><label>dk <input id="tm" type="number" min="0" max="999" value="5"></label><label>sn <input id="ts" type="number" min="0" max="59" value="0"></label></span>
+    <div id="wheel" hidden></div>
     <span id="presets"></span>
   </div>
   <div id="ctl"><button id="go" class="main">Başlat</button><button id="lap">Tur</button><button id="rst">Sıfırla</button></div>

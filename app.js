@@ -1,6 +1,6 @@
 'use strict';
 const $ = s => document.querySelector(s), KEY = 'zamanlayici-v1';
-const DEF = { digit:'#e8fbff', accent:'#22d3ee', bg1:'#0f172a', bg2:'#1e1b4b', angle:135, dim:0, blur:0, size:16, weight:600, spacing:2, glow:20, font:'Orbitron', pos:'cc', ms:true, sound:true, zen:false, img:'', cgo:'#22d3ee', clap:'#22d3ee', crst:'#22d3ee', ctab:'#22d3ee', cpre:'#22d3ee', bs:'line' };
+const DEF = { digit:'#e8fbff', accent:'#22d3ee', bg1:'#0f172a', bg2:'#1e1b4b', angle:135, dim:0, blur:0, size:16, weight:600, spacing:2, glow:20, font:'Orbitron', pos:'cc', ms:true, sound:true, zen:false, wheel:false, img:'', cgo:'#22d3ee', clap:'#22d3ee', crst:'#22d3ee', ctab:'#22d3ee', cpre:'#22d3ee', bs:'line' };
 const mk = (n, d, a, b1, b2, font, w, g, ang, b, bs) => [n, { digit:d, accent:a, bg1:b1, bg2:b2, font, weight:w, glow:g, angle:ang, dim:0, blur:0, cgo:b[0], clap:b[1], crst:b[2], ctab:b[3], cpre:b[4], bs }];
 const THEMES = [
   mk('Obsidyen', '#f3e7c9', '#c9a45c', '#0b0b0d', '#1c1812', 'Cormorant Garamond', 300, 8, 160, ['#c9a45c', '#8a7545', '#8a7545', '#c9a45c', '#6b5a38'], 'line'),
@@ -36,7 +36,8 @@ function apply() {
   $('#bg').style.background = S.img ? `center/cover url(${S.img})` : `linear-gradient(${S.angle}deg,${S.bg1},${S.bg2})`;
   $('#bg').style.filter = `blur(${S.blur}px)`; $('#shade').style.background = `rgba(0,0,0,${S.dim / 100})`;
   const st = $('#stage').style; st.justifyContent = A.v[S.pos[0]]; st.alignItems = A.h[S.pos[1]]; st.textAlign = { l:'left', c:'center', r:'right' }[S.pos[1]];
-  document.body.classList.toggle('zen', S.zen); tick();
+  document.body.classList.toggle('zen', S.zen);
+  $('#nums').hidden = S.wheel; $('#wheel').hidden = !S.wheel; syncWheel(); tick();
 }
 
 /* ---------- Zaman mantığı ---------- */
@@ -68,13 +69,13 @@ function finish() {
   if (S.sound) try { const a = new AudioContext(); [0, .35, .7].forEach(d => { const o = a.createOscillator(), g = a.createGain(); o.frequency.value = 880; o.connect(g); g.connect(a.destination); g.gain.setValueAtTime(.2, a.currentTime + d); g.gain.exponentialRampToValueAtTime(.001, a.currentTime + d + .28); o.start(a.currentTime + d); o.stop(a.currentTime + d + .3); }); } catch (_) {}
 }
 function setDur() { if (run) return; dur = ((+$('#th').value || 0) * 3600 + (+$('#tm').value || 0) * 60 + (+$('#ts').value || 0)) * 1000 || 1000; reset(); }
-function setMode(m) { mode = m; reset(); document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('on', b.dataset.m === m)); $('#cdset').hidden = m !== 'cd'; if (m === 'cd') setDur(); }
+function setMode(m) { mode = m; reset(); document.querySelectorAll('#modes button').forEach(b => b.classList.toggle('on', b.dataset.m === m)); $('#cdset').hidden = m !== 'cd'; if (m === 'cd') { setDur(); syncWheel(); } }
 
 document.querySelectorAll('#modes button').forEach(b => b.onclick = () => setMode(b.dataset.m));
 $('#go').onclick = toggle; $('#rst').onclick = reset; $('#lap').onclick = lap;
 ['#th', '#tm', '#ts'].forEach(s => $(s).oninput = setDur);
 $('#presets').innerHTML = [1, 5, 10, 25, 45].map(m => `<button data-m="${m}">${m} dk</button>`).join('');
-$('#presets').onclick = e => { const m = e.target.dataset.m; if (!m) return; $('#th').value = 0; $('#tm').value = m; $('#ts').value = 0; setDur(); };
+$('#presets').onclick = e => { const m = e.target.dataset.m; if (!m) return; $('#th').value = 0; $('#tm').value = m; $('#ts').value = 0; setDur(); syncWheel(); };
 $('#fs').onclick = () => document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.();
 $('#gear').onclick = () => $('#panel').hidden = !$('#panel').hidden;
 addEventListener('keydown', e => {
@@ -84,6 +85,41 @@ addEventListener('keydown', e => {
 });
 let actT; const act = () => { document.body.classList.add('act'); clearTimeout(actT); actT = setTimeout(() => document.body.classList.remove('act'), 2500); };
 ['pointermove', 'pointerdown', 'keydown'].forEach(ev => addEventListener(ev, act));
+
+/* ---------- Rulet zaman seçici ---------- */
+const WH = 40, WCOLS = [['th', 'sa', 99], ['tm', 'dk', 59], ['ts', 'sn', 59]];
+const wIdx = u => Math.max(0, Math.min(u.children.length - 1, Math.round(u.scrollTop / WH)));
+function buildWheel() {
+  $('#wheel').innerHTML = '<i class="band"></i>' + WCOLS.map(([id, l, mx]) =>
+    `<div class="wcol"><ul tabindex="0" data-id="${id}" role="spinbutton" aria-label="${l}">${Array.from({ length: mx + 1 }, (_, i) => `<li>${p2(i)}</li>`).join('')}</ul><small>${l}</small></div>`).join('');
+}
+function mark(u) {                                              // ortadaki değeri vurgula
+  const i = wIdx(u); if (u._i === i) return;
+  u.children[u._i]?.classList.remove('sel'); u.children[i].classList.add('sel'); u._i = i;
+}
+function syncWheel() {                                          // sayı kutularındaki değeri ruletlere yansıt
+  if (!S.wheel) return;
+  const t = (+$('#th').value || 0) * 3600 + (+$('#tm').value || 0) * 60 + (+$('#ts').value || 0);
+  $('#th').value = Math.min(99, t / 3600 | 0); $('#tm').value = t % 3600 / 60 | 0; $('#ts').value = t % 60;
+  document.querySelectorAll('#wheel ul').forEach(u => { u.scrollTop = $('#' + u.dataset.id).value * WH; mark(u); });
+}
+function commitWheel(u) {
+  if (run) return syncWheel();                                  // çalışırken süre değişmesin
+  const inp = $('#' + u.dataset.id), i = wIdx(u);
+  if (+inp.value !== i) { inp.value = i; setDur(); }
+}
+$('#wheel').addEventListener('scroll', e => {
+  const u = e.target; if (u.tagName !== 'UL') return;
+  mark(u); clearTimeout(u._t); u._t = setTimeout(() => commitWheel(u), 90);
+}, true);
+$('#wheel').addEventListener('click', e => {                    // bir değere tıklayınca ortaya getir
+  const li = e.target.closest('li'); if (!li) return;
+  li.parentNode.scrollTo({ top: [...li.parentNode.children].indexOf(li) * WH, behavior: 'smooth' });
+});
+$('#wheel').addEventListener('keydown', e => {
+  if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+  e.preventDefault(); const u = e.target; u.scrollTo({ top: (wIdx(u) + (e.key === 'ArrowDown' ? 1 : -1)) * WH, behavior: 'smooth' });
+});
 
 /* ---------- Özelleştirme paneli ---------- */
 function build() {
@@ -101,6 +137,7 @@ function build() {
   }
   h += sel('font', ['Yazı tipi', FONTS.map(f => `<option>${f}</option>`).join('')]) + sel('pos', ['Konum', Object.entries(POS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')]);
   h += '</section><section><h3>Davranış</h3><label>Salise göster<input type="checkbox" data-k="ms"></label><label>Bitince ses çal<input type="checkbox" data-k="sound"></label><label>Çalışırken arayüzü gizle<input type="checkbox" data-k="zen"></label></section>';
+  h += '<section><h3>Zaman seçimi <span class="plus">PLUS</span></h3><label>Rulet ile süre seç<input type="checkbox" data-k="wheel"></label></section>';
   h += '<section><h3>Ayarlar</h3><div class="row"><button id="exp">Dışa aktar</button><button id="imp">İçe aktar</button><button id="def">Sıfırla</button></div><input id="jf" type="file" accept=".json" hidden></section>';
   $('#pbody').innerHTML = h.replace('<section></section>', ''); fill();
 }
@@ -128,4 +165,4 @@ $('#panel').addEventListener('change', e => {
   } else if (e.target.id === 'jf') f.text().then(t => { try { const j = JSON.parse(t); for (const k in DEF) if (k in j && typeof j[k] === typeof DEF[k]) S[k] = j[k]; fill(); apply(); save(); } catch (_) { alert('Geçersiz ayar dosyası.'); } });
   e.target.value = '';
 });
-build(); apply(); ui();
+build(); buildWheel(); apply(); ui();

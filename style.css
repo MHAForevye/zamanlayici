@@ -64,3 +64,19 @@ body.zen.run:not(.act) #modes,body.zen.run:not(.act) #ctl,body.zen.run:not(.act)
 #panel .chips button{height:70px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:4px;border:1px solid rgba(255,255,255,.2);border-radius:12px;text-shadow:none}
 .chips .sw{font-size:24px;line-height:1}
 .chips small{font-size:11px;opacity:.8}
+
+/* --- Rulet zaman seçici --- */
+#nums{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#nums[hidden],#wheel[hidden]{display:none}
+#wheel{position:relative;display:flex;gap:14px;align-items:flex-start;padding:0 10px;transition:opacity .3s}
+#wheel .band{position:absolute;left:0;right:0;top:60px;height:40px;border-radius:12px;border:1.5px solid var(--c-pre);background:color-mix(in srgb,var(--c-pre) 12%,transparent);pointer-events:none}
+.wcol{display:flex;flex-direction:column;align-items:center;gap:4px;position:relative}
+.wcol ul{list-style:none;margin:0;padding:60px 0;height:160px;overflow-y:auto;scroll-snap-type:y mandatory;scrollbar-width:none;overscroll-behavior:contain;outline:none;-webkit-mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent);mask-image:linear-gradient(transparent,#000 30%,#000 70%,transparent)}
+.wcol ul::-webkit-scrollbar{display:none}
+.wcol ul:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:12px}
+.wcol li{height:40px;line-height:40px;min-width:3.2em;text-align:center;scroll-snap-align:center;font-size:1.3rem;font-variant-numeric:tabular-nums;opacity:.35;cursor:pointer;transition:opacity .15s,transform .15s}
+.wcol li.sel{opacity:1;transform:scale(1.15);font-weight:600}
+.wcol small{opacity:.7}
+body.run #wheel{pointer-events:none;opacity:.6}
+body.zen.run:not(.act) #wheel{opacity:0}
+#panel .plus{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:99px;background:var(--accent);color:#000;font-size:10px;letter-spacing:.06em;vertical-align:1px}
