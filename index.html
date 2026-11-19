@@ -18,9 +18,10 @@
 <div id="bg"></div><div id="shade"></div>
 <main id="stage">
   <div id="lcol">
-  <nav id="modes"><button data-m="sw" class="on">Kronometre</button><button data-m="cd">Geri sayım</button></nav>
+  <nav id="modes"><button data-m="sw" class="on">Kronometre</button><button data-m="cd">Geri sayım</button><button data-m="iv">Aralık</button></nav>
   <div id="clock" aria-live="off">00:00.00</div>
-  <div id="ctl"><button id="go" class="main">Başlat</button><button id="lap">Tur</button><button id="rst">Sıfırla</button></div>
+  <div id="rnd" hidden></div>
+  <div id="ctl"><button id="go" class="main">Başlat</button><button id="lap">Tur</button><button id="rst">Sıfırla</button><button id="lapx" hidden>Turları kopyala</button></div>
   <ol id="laps"></ol>
   </div>
   <div id="cdset" hidden>
@@ -29,6 +30,7 @@
     <div id="cwheel" hidden></div>
     <span id="presets"></span>
   </div>
+  <div id="ivset" hidden><label>çalışma dk <input id="iw" type="number" min="1" max="180"></label><label>mola dk <input id="ib" type="number" min="1" max="60"></label><label>tur <input id="ir" type="number" min="1" max="20"></label></div>
 </main>
 <div id="tools">
   <button id="a2" hidden title="Ana ekrana ekle" aria-label="Ana ekrana ekle"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19"/><path d="M12 8v6M9 11h6"/></svg><span>Ana ekrana ekle</span></button>
@@ -38,6 +40,7 @@
 <aside id="panel" hidden aria-label="Özelleştirme"><header><span>Özelleştir</span><button id="pclose" aria-label="Paneli kapat">✕</button></header><div id="pbody"></div></aside>
 <div id="a2b" role="status" aria-live="polite"><span><b>Ana ekrana ekle</b>Daha hızlı ulaşmak için tek dokunuşla ana ekranına sabitle.</span><button id="a2add">Ekle</button><button id="a2x" aria-label="Kapat">✕</button></div>
 <div id="a2h" hidden role="dialog" aria-modal="true" aria-labelledby="a2title"><div><h2 id="a2title">Ana ekrana ekle</h2><ol id="a2s"></ol><button id="a2ok">Tamam</button></div></div>
+<script src="pass.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

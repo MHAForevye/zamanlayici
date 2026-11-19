@@ -22,8 +22,8 @@ body[data-bs=line] #stage button{background:transparent;color:var(--c)}
 #modes .on{background:var(--c)!important;color:var(--t)!important;font-weight:600}
 #tools button{background:rgba(0,0,0,.35);color:#fff;border-color:rgba(255,255,255,.3)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-#modes,#ctl,#cdset,#presets{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-#cdset input{width:4.2em;padding:.4em;border-radius:var(--r);border:1.5px solid var(--c-pre);background:rgba(0,0,0,.3);text-align:center}
+#modes,#ctl,#cdset,#presets,#ivset{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+#cdset input,#ivset input{width:4.2em;padding:.4em;border-radius:var(--r);border:1.5px solid var(--c-pre);background:rgba(0,0,0,.3);text-align:center}
 #laps{list-style:none;margin:0;padding:0;max-width:26rem;width:100%}
 #laps li{display:flex;justify-content:space-between;gap:1rem;padding:.35em 0;border-bottom:1px solid rgba(255,255,255,.18);font-variant-numeric:tabular-nums}
 #laps b{color:var(--accent)}
@@ -39,7 +39,7 @@ body[data-bs=line] #stage button{background:transparent;color:var(--c)}
 .chips{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .chips button{height:44px;padding:0;border-radius:var(--r);font-size:11px;text-shadow:0 1px 2px #000;color:#fff}
 .row{display:flex;gap:8px;flex-wrap:wrap}
-body.zen.run:not(.act) #modes,body.zen.run:not(.act) #ctl,body.zen.run:not(.act) #tools>:not(#fs),body.zen.run:not(.act) #laps,body.zen.run:not(.act) #cdset{opacity:0;pointer-events:none}
+body.zen.run:not(.act) #modes,body.zen.run:not(.act) #ctl,body.zen.run:not(.act) #tools>:not(#fs),body.zen.run:not(.act) #laps,body.zen.run:not(.act) #cdset,body.zen.run:not(.act) #ivset{opacity:0;pointer-events:none}
 #modes,#ctl,#tools,#laps,#cdset{transition:opacity .5s}
 @media(prefers-reduced-motion:reduce){#clock.done{animation:none}}
 
@@ -94,7 +94,7 @@ body[data-bs=fill] #cspin{background:var(--c);color:var(--t)}
 body.run #cwheel{pointer-events:none;opacity:.6}
 
 /* --- Tam ekran: yalnızca süre, Duraklat/Tur/Sıfırla ve çıkış düğmesi kalır --- */
-body.fs :is(#modes,#cdset,#laps,#gear,#panel,#a2,#a2b,#a2h){display:none!important}
+body.fs :is(#modes,#cdset,#ivset,#rnd,#laps,#gear,#panel,#a2,#a2b,#a2h){display:none!important}
 
 #panel .plus.prem{background:linear-gradient(135deg,#f5d77a,#c9972c)}
 
@@ -129,7 +129,7 @@ button,input,select{touch-action:manipulation}
 @supports (justify-content:safe center){#stage{justify-content:safe var(--av,center);align-items:safe var(--ah,center)}}   /* içerik sığmazsa üstten kırpılmasın, kaydırılsın */
 #tools{top:calc(12px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px))}
 #lcol{display:contents}
-#modes{order:1}#clock{order:2}#cdset{order:3}#ctl{order:4}#laps{order:5}
+#modes{order:1}#clock,#rnd{order:2}#cdset,#ivset{order:3}#ctl{order:4}#laps{order:5}
 
 /* boyutlar ekrana göre */
 #cwsvg{width:min(34vh,78vw,380px)}
@@ -205,3 +205,21 @@ body.pn #tools{right:calc(env(safe-area-inset-right,0px) + min(360px,100vw) + 12
 #a2h ol{margin:0 0 14px;padding-left:1.3em;line-height:1.55}
 #a2h li{margin:4px 0}
 @media(prefers-reduced-motion:reduce){#tools #fs{animation:none!important}#a2b,#a2b.show{transition:none}}
+
+/* --- Üyelik, kilitler, Aralık modu --- */
+#panel .need{margin:6px 0 2px;font-size:12px;line-height:1.4;opacity:.65}
+#panel :is(select,input,button):disabled{opacity:.4;cursor:not-allowed}
+#pstat{margin:4px 0 8px;font-size:13px}
+#passbox .row{flex-wrap:nowrap}
+#passbox .row input{flex:1;min-width:0;padding:.5em .7em;background:#101014;border:1px solid #3a3a42;border-radius:var(--r);color:#eee;font:600 14px/1.2 ui-monospace,Menlo,monospace;letter-spacing:.08em}
+#pmsg{min-height:1.2em;margin:6px 0 4px;font-size:12.5px;opacity:.9}
+#passbox a{color:var(--accent);font-size:12.5px}
+#modes .locked::after{content:"\1F512";margin-left:.4em;font-size:.8em}
+#presets #psave.locked,#lapx.locked{opacity:.6}
+#lapx{--c:var(--c-lap);--t:var(--t-lap)}
+#rnd{font-size:clamp(13px,2.2vh,20px);letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
+#ivset{align-items:center}
+#ivset label{display:flex;gap:.4em;align-items:center}
+#ivset input{padding:.4em;border-radius:var(--r);border:1.5px solid var(--c-pre);background:rgba(0,0,0,.3);text-align:center}
+body[data-ph=break] #clock{opacity:.7}
+@media(pointer:coarse){#ivset input{font-size:16px;min-height:44px}#passbox .row input{font-size:16px;min-height:42px}}

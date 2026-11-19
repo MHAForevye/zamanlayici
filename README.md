@@ -9,11 +9,14 @@ Zamanlayıcı; sade, hızlı ve baştan sona kişiselleştirilebilir bir kronome
 **Kronometre ve geri sayım**
 Tur kaydıyla kronometre tut ya da saat, dakika, saniye girerek ya da hazır sürelerden birini seçerek geri sayım başlat. Süre bitince ses çalar, telefon titrer ve rakamlar yanıp söner.
 
-**Kaydırmalı rulet (Plus)**
-Süreyi parmağınla kaydırarak seç. Fare tekerleği, dokunma ve ok tuşlarıyla da çalışır.
+**Plus** (kodla açılır)
+Kaydırmalı rulet ile süre seç · geri sayımı 2, 3, 5, 10 kez ya da sonsuz tekrarla · Zil, Melodi, Alarm sesleri · "+" ile süreleri kaydet (5 adet) · tur listesini panoya kopyala.
 
-**Casino çarkı (Premium)**
-Çarkı döndür ya da top at; saat, dakika ve saniyeni çarkla belirle. 3 farklı çark rengi: Klasik, Kraliyet, Buz.
+**Premium** (Plus'ın hepsi dahil)
+Casino çarkı (Klasik, Kraliyet, Buz) · Aralık modu: çalışma/mola turları (ör. 25 dk + 5 dk × 4) · arka plandayken bildirim · 20 kayıtlı süre.
+
+**Kod nasıl çalışır?**
+Forevye Mağaza'dan kristalle 3 ya da 7 günlük kod alınır. Ayarlar panelindeki "Üyelik" bölümüne girilir; sunucu doğrular, süre o an başlar. Kod en fazla 2 cihazda kullanılır. Süre dolunca kilitler kendiliğinden geri gelir, ayarların silinmez. İnternet yoksa son bilinen plan süresi bitene kadar geçerli kalır; uygulama günde bir kez sunucudan teyit eder.
 
 **Tam ekran**
 Tek dokunuşla yalnızca süre ve düğmelerin kaldığı sade görünüme geç.
