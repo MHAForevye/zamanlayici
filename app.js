@@ -376,7 +376,7 @@ $('#panel').addEventListener('change', e => {
 let pmsg = '';
 const ERR = { invalid_code: 'Kod geçersiz. Harfleri kontrol et.', used: 'Bu kod en fazla 2 cihazda kullanılabilir; limit dolu.', expired: 'Bu kodun süresi dolmuş.', wrong_app: 'Bu kod Zamanlayıcı için değil.', rate_limited: 'Çok fazla deneme. Biraz sonra tekrar dene.', net: 'Sunucuya ulaşılamadı. İnternetini kontrol edip tekrar dene.' };
 const leftTxt = ms => { const d = ms / 864e5 | 0, h = ms % 864e5 / 36e5 | 0, m = Math.max(1, Math.ceil(ms % 36e5 / 6e4)); return d ? `${d} gün ${h} sa` : h ? `${h} sa ${m} dk` : `${m} dk`; };
-const passHtml = () => `<section id="passbox"><h3>Üyelik</h3><div id="pstat"></div><div class="row"><input id="pcode" placeholder="ABCD-EFGH-JKLMN" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20" aria-label="Plus veya Premium kodu"><button id="predeem">Kodu gir</button></div><div id="pmsg" role="status"></div><a href="${ZP.MARKET}" target="_blank" rel="noopener">Forevye Mağaza’dan kod al</a></section>`;
+const passHtml = () => `<section id="passbox"><h3>Üyelik</h3><div id="pstat"></div><div class="row"><input id="pcode" placeholder="ABCD-EFGH-JKLMN" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="20" aria-label="Plus veya Premium kodu"><button id="predeem">Kodu gir</button></div><div id="pmsg" role="status"></div><a href="${ZP.MARKET}" target="_blank" rel="noopener">Nexus Pass’ten kod al</a></section>`;
 function passRender() {
   const s = $('#pstat'); if (!s) return; const p = ZP.plan();
   s.innerHTML = p === 'free' ? 'Ücretsiz sürüm' : `<span class="plus${p === 'premium' ? ' prem' : ''}">${p.toUpperCase()}</span> ${leftTxt(ZP.expiry() - Date.now())} kaldı`;
@@ -438,3 +438,12 @@ $('#a2').onclick = a2add; $('#a2add').onclick = a2add; $('#a2x').onclick = () =>
 $('#a2h').addEventListener('click', e => { if (e.target.id === 'a2h' || e.target.id === 'a2ok') $('#a2h').hidden = true; });
 a2sync(); a2next(Math.max(A2.first, A2.every - (Date.now() - (+lsGet(A2.last) || 0))));
 if ('serviceWorker' in navigator && location.protocol !== 'file:') addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+/* Nexus Pass'teki "Zamanlayıcı'da aç" bağlantısı kodu #kod= ile getirir: oku, adresten sil, kendiliğinden etkinleştir */
+(async () => {
+  const m = /(?:^#|&)kod=([^&]+)/.exec(location.hash); if (!m) return;
+  let c = ''; try { c = decodeURIComponent(m[1]); } catch (_) {}
+  window.history.replaceState(null, '', location.pathname + location.search);   // kod adreste ve geçmişte kalmasın
+  hint('Kod kontrol ediliyor…');
+  const r = await ZP.redeem(c);
+  hint(r.ok ? `${r.plan === 'premium' ? 'Premium' : 'Plus'} etkinleşti. Bitiş: ${new Date(r.exp).toLocaleString('tr-TR', { dateStyle: 'medium', timeStyle: 'short' })}` : (ERR[r.error] || ERR.net));
+})();

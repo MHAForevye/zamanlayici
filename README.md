@@ -16,7 +16,7 @@ Kaydırmalı rulet ile süre seç · geri sayımı 2, 3, 5, 10 kez ya da sonsuz 
 Casino çarkı (Klasik, Kraliyet, Buz) · Aralık modu: çalışma/mola turları (ör. 25 dk + 5 dk × 4) · arka plandayken bildirim · 20 kayıtlı süre.
 
 **Kod nasıl çalışır?**
-Forevye Mağaza'dan kristalle 3 ya da 7 günlük kod alınır. Ayarlar panelindeki "Üyelik" bölümüne girilir; sunucu doğrular, süre o an başlar. Kod en fazla 2 cihazda kullanılır. Süre dolunca kilitler kendiliğinden geri gelir, ayarların silinmez. İnternet yoksa son bilinen plan süresi bitene kadar geçerli kalır; uygulama günde bir kez sunucudan teyit eder.
+Nexus Pass'ten kristalle 3 ya da 7 günlük kod alınır. "Zamanlayıcı'da aç" düğmesi kodu kendiliğinden girer; elle girmek için Ayarlar panelindeki "Üyelik" bölümü de var; sunucu doğrular, süre o an başlar. Kod en fazla 2 cihazda kullanılır. Süre dolunca kilitler kendiliğinden geri gelir, ayarların silinmez. İnternet yoksa son bilinen plan süresi bitene kadar geçerli kalır; uygulama günde bir kez sunucudan teyit eder.
 
 **Tam ekran**
 Tek dokunuşla yalnızca süre ve düğmelerin kaldığı sade görünüme geç.

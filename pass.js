@@ -1,8 +1,8 @@
 'use strict';
 /* Zamanlayıcı üyelik: kodu sunucuda doğrular, planı (plus / premium) süresi dolana kadar saklar.
-   Mağazadan alınan kod Forevye sunucusunda (Cloudflare Worker) kontrol edilir. */
+   Nexus Pass'ten alınan kod Forevye sunucusunda (Cloudflare Worker) kontrol edilir. */
 (function (g) {
-  const API = 'https://mikroklimakontrolmerkezi.forevye.workers.dev/api/zamanlayici/', MARKET = 'https://mhaforevye.github.io/market/';
+  const API = 'https://mikroklimakontrolmerkezi.forevye.workers.dev/api/zamanlayici/', MARKET = 'https://mhaforevye.github.io/nexus-pass/#discover';
   const KP = 'zamanlayici-pass', KD = 'zamanlayici-dev', RANK = { free: 0, plus: 1, premium: 2 }, DAY = 864e5, MAXP = 5;
   const ls = { get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} } };
   let list = [];
