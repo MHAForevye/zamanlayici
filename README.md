@@ -36,7 +36,7 @@ Sayaç çalışırken arayüz kaybolur, dokunduğunda geri gelir.
 **Her ekrana uyumlu**
 Telefon, tablet ve bilgisayar; dikey ve yatay. Sayaç çalışırken ekran kararmaz.
 
-**Senin ayarların**
+**FOREVYE ID ve günlük kristal görevi**\nFOREVYE ID ile güvenli giriş yap. Daha önce Nexus Pass'e bağladığın Kristal hesabı otomatik tanınır; eski bir hesap anahtarı bu cihazda kayıtlıysa ID oturumuna sessizce eşleştirilir. İlk kez bağlanıyorsan Kristal hesabını yalnızca bir defa eşleştirmen gerekir. Sonraki girişlerde otomatik tanınır.\n\n**Senin ayarların**
 Tüm ayarlar cihazında saklanır. Temanı dışa aktar, istediğin zaman içe aktar.
 
 **Klavye kısayolları**
