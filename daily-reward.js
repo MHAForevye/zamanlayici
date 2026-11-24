@@ -1,7 +1,7 @@
 'use strict';
 /* Günlük kristal görevi: FOREVYE ID uygulama oturumu kullanır.
-   Kristal hesabı, Nexus Pass'in mevcut np_links kaydından sunucuda otomatik bulunur.
-   Bu istemci hiçbir yerde ID.ANAHTAR / yedek anahtar istemez veya saklamaz. */
+   Banka hesabı, FOREVYE ID kullanıcı kimliğiyle Nexus Banka'da sunucu tarafında otomatik bulunur.
+   Kristal ödülü doğrudan Banka'nın crystal_holdings cüzdanına aktarılır. Yedek anahtar yoktur. */
 (function (g) {
   const API = 'https://mikroklimakontrolmerkezi.forevye.workers.dev';
   const APP = 'zamanlayici';
@@ -63,7 +63,7 @@
       if (!d.accessToken || !d.refreshToken || !d.user || !d.user.userId) throw new Error('FOREVYE ID oturumu eksik yanıt verdi.');
       saveSession({ accessToken: d.accessToken, refreshToken: d.refreshToken, expiresAt: Date.now() + 25 * 60e3, user: d.user });
       user = d.user;
-      message('FOREVYE ID tanındı. Kristal hesabın otomatik eşleştiriliyor…');
+      message('FOREVYE ID tanındı. Nexus Banka hesabın otomatik tanınıyor…');
     } catch (e) { message(e.message); }
     finally {
       sessionStorage.removeItem(PENDING_KEY);
@@ -103,7 +103,7 @@
       <div class="dr-head"><div><span class="dr-kicker">GÜNLÜK GÖREV</span><h3>Kristal çarkı</h3><p class="need">Her gün bir kez çevir. Seçilen süreyi Zamanlayıcı'da tamamla, kristallerin hesabına otomatik eklensin.</p></div><span class="dr-chip">1 HAK / GÜN</span></div>
       <div class="dr-layout"><div class="dr-wheel-col"><button type="button" id="dr-spin" class="dr-wheel-button" aria-label="Günlük kristal çarkını çevir" disabled>${wheelSvg()}<span class="dr-pointer" aria-hidden="true">◆</span></button><div id="dr-wheel-caption" class="dr-wheel-caption">FOREVYE ID ile giriş yap</div></div>
         <div class="dr-info"><div id="dr-account-status" class="dr-account-status">FOREVYE ID oturumu bekleniyor.</div>
-          <div id="dr-loginbox" class="dr-linkbox"><button type="button" id="dr-id-login" class="dr-action">FOREVYE ID ile giriş yap</button><p class="dr-help">FOREVYE ID hesabın, Nexus Pass'te bağladığın Kristal hesabını otomatik tanır. Yedek ID veya gizli anahtar gerekmez.</p></div>
+          <div id="dr-loginbox" class="dr-linkbox"><button type="button" id="dr-id-login" class="dr-action">FOREVYE ID ile giriş yap</button><p class="dr-help">FOREVYE ID hesabın Nexus Banka hesabını otomatik tanır. Kristal ödülleri doğrudan banka cüzdanına aktarılır; yedek ID, gizli anahtar veya kopyala-yapıştır gerekmez.</p></div>
           <div id="dr-task" class="dr-task" hidden><div class="dr-target"><span>BUGÜNKÜ HEDEF</span><b id="dr-target-value">—</b></div><div class="dr-reward"><span>TAMAMLAMA ÖDÜLÜ</span><b id="dr-reward-value">—</b></div><div class="dr-progress"><div id="dr-progress-fill"></div></div><div class="dr-progress-meta"><span id="dr-progress-text">0 / 0</span><span id="dr-percent">0%</span></div><p id="dr-message" class="dr-message">Süreyi tamamladığında ödül hesabına aktarılır.</p><button type="button" id="dr-disconnect" class="dr-text-button">FOREVYE ID oturumunu kapat</button></div>
         </div></div>
       <p id="dr-status" class="dr-status" role="status" aria-live="polite"></p>
@@ -121,7 +121,7 @@
     const card = $('#dr-card'); if (!card) return;
     const logged = !!session;
     $('#dr-loginbox').hidden = logged;
-    $('#dr-account-status').textContent = logged ? `FOREVYE ID tanındı · ${user?.username || session.user?.username || 'Kristal hesabın eşleştiriliyor'}` : 'Kristal hesabını FOREVYE ID üzerinden otomatik tanıyacağız.';
+    $('#dr-account-status').textContent = logged ? `FOREVYE ID tanındı · ${user?.username || session.user?.username || 'Banka Kristal cüzdanı bağlı'}` : 'FOREVYE ID, Nexus Banka hesabını otomatik tanır. Ödüller doğrudan bankadaki Kristal cüzdanına yatırılır.';
     $('#dr-disconnect').hidden = !logged;
     $('#dr-spin').disabled = !logged || !task || task.spun || spinBusy;
     $('#dr-wheel-caption').textContent = !logged ? 'FOREVYE ID ile giriş yap' : spinBusy ? 'Çark dönüyor…' : !task || !task.spun ? 'ÇARKI ÇEVİR' : `Bugünkü hedef: ${fmt(task.targetSeconds)}`;
@@ -145,11 +145,11 @@
     try {
       const d = await api('/state'); task = d.task;
       if (!user) user = session.user || null;
-      message('FOREVYE ID ve Kristal hesabın otomatik eşitlendi.');
+      message('FOREVYE ID ve Nexus Banka hesabın otomatik bağlandı.');
     } catch (e) {
-      if (e.code === 'no_crystal_account') {
+      if (e.code === 'bank_account_not_found') {
         task = null;
-        message('FOREVYE ID tanındı ancak bu ID hesabında Nexus Pass ile eşlenmiş Kristal hesabı kaydı bulunamadı. Nexus Pass bağlantısı aynı ID hesabına ait olmalı.');
+        message('Banka hesabı otomatik eşleştirilemedi. Banka hesabının doğrulanmış e-posta bilgisiyle FOREVYE ID kimliği eşleştirilemiyor.');
       } else if (e.status === 401) { clearSession(); task = null; message('FOREVYE ID oturumunun süresi doldu. Yeniden giriş yap.'); }
       else message(e.message);
     }
