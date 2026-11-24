@@ -68,10 +68,10 @@ function tick() {
 function ui() { $('#go').textContent = run ? 'Duraklat' : el() > 0 ? 'Devam' : 'Başlat'; $('#lap').hidden = mode !== 'sw'; $('#lapx').hidden = mode !== 'sw' || !laps.length; document.body.classList.toggle('run', run); wake(run); }
 function toggle() {
   if (cd() && !run && dur - el() <= 0) reset();
-  if (run) { base = el(); run = false; cancelAnimationFrame(raf); clearTimeout(ft); } else { audio(); t0 = performance.now(); run = true; arm(); $('#clock').classList.remove('done'); raf = requestAnimationFrame(tick); }
+  if (run) { base = el(); run = false; cancelAnimationFrame(raf); clearTimeout(ft); if (mode === 'sw') DailyReward.completeTask(); else DailyReward.stopSegment(); } else { audio(); t0 = performance.now(); run = true; arm(); $('#clock').classList.remove('done'); raf = requestAnimationFrame(tick); if (mode !== 'iv' || ph % 2 === 0) DailyReward.startSegment(mode === 'iv' ? 'interval-work' : mode === 'cd' ? 'countdown' : 'stopwatch'); }
   ui(); tick();
 }
-function reset() { ph = 0; rn = 1; if (mode === 'iv') dur = ivLen(0); rndUi(); run = false; cancelAnimationFrame(raf); clearTimeout(ft); base = 0; laps = []; $('#laps').innerHTML = ''; $('#clock').classList.remove('done'); document.title = 'Zamanlayıcı'; ui(); tick(); }
+function reset() { DailyReward.stopSegment(); ph = 0; rn = 1; if (mode === 'iv') dur = ivLen(0); rndUi(); run = false; cancelAnimationFrame(raf); clearTimeout(ft); base = 0; laps = []; $('#laps').innerHTML = ''; $('#clock').classList.remove('done'); document.title = 'Zamanlayıcı'; ui(); tick(); }
 function lap() {
   if (mode !== 'sw' || !run) return; const v = el(), prev = laps.length ? laps[0].t : 0; laps.unshift({ t: v }); $('#lapx').hidden = false;
   $('#laps').insertAdjacentHTML('afterbegin', `<li><span>Tur ${laps.length}</span><b>${fmt(v - prev)}</b><i>${fmt(v)}</i></li>`);
@@ -103,10 +103,14 @@ function rndUi() {                                             // aşama / tekra
 function finish() {
   const iv = mode === 'iv' && ph < 2 * S.ivn - 2, rp = mode === 'cd' && ZP.has('plus') && S.rep > 1 && rn < S.rep;
   if (iv || rp) {                                              // sıradaki aşamaya / tekrara kesintisiz geç
+    const wasWork = mode === 'iv' && ph % 2 === 0;
+    if (wasWork) DailyReward.stopSegment().then(() => { if (mode === 'iv' && run && ph % 2 === 0) DailyReward.startSegment('interval-work'); });
     cancelAnimationFrame(raf); if (iv) { ph++; dur = ivLen(ph); } else rn++;
+    if (mode === 'iv' && !wasWork && ph % 2 === 0) DailyReward.startSegment('interval-work');
     base = 0; t0 = performance.now(); arm(); rndUi(); sound('chime'); navigator.vibrate?.(200);
     notify(iv ? (ph % 2 ? 'Mola başladı' : 'Çalışma başladı') : 'Süre bitti, tekrar başlıyor'); return;
   }
+  DailyReward.completeTask();
   run = false; base = dur; cancelAnimationFrame(raf); $('#clock').classList.add('done'); document.title = 'Süre bitti'; ui();
   navigator.vibrate?.([300, 150, 300, 150, 300]); sound(tone()); notify('Süre bitti');
 }
@@ -190,7 +194,7 @@ async function wake(on) {                                      // sayaç çalı�
     else if (!on && wl) { await wl.release(); wl = null; }
   } catch (_) { wl = null; }
 }
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && run) wake(true); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && run) { wake(true); DailyReward.onVisibility(run, mode, ph); } });
 function arm() {                                               // sekme arka plandayken de süre bitince haber ver
   clearTimeout(ft); if (!cd()) return;
   ft = setTimeout(() => { if (run && dur - el() <= 0) tick(); }, Math.max(0, dur - el()) + 30);
@@ -341,6 +345,7 @@ function build() {
   h += '<section><h3>Casino çarkı <span class="plus prem">PREMIUM</span></h3>' + `<label>Casino çarkı ile süre seç<input type="checkbox" data-k="casino"${lk('premium')}></label>` + sel('ctheme', ['Çark rengi', Object.entries(CTHEMES).map(([k, v]) => `<option value="${k}">${v[0]}</option>`).join('')], lk('premium')) + note('premium') + '</section>';
   h += `<section><h3>Aralık ve bildirim <span class="plus prem">PREMIUM</span></h3><p class="need">Üstteki “Aralık” sekmesi: çalışma ve mola turları (ör. 25 dk + 5 dk × 4).</p><label>Süre bitince bildirim gönder<input type="checkbox" data-k="notify"${lk('premium')}></label><p class="need">Uygulama arka plandayken haber verir; uygulama kapalıysa bildirim gelmez.</p>${note('premium')}</section>`;
   h += '<section><h3>Ayarlar</h3><div class="row"><button id="exp">Dışa aktar</button><button id="imp">İçe aktar</button><button id="def">Sıfırla</button></div><input id="jf" type="file" accept=".json" hidden></section>';
+  h += DailyReward.panelHtml();
   $('#pbody').innerHTML = h.replace('<section></section>', ''); fill(); passRender();
 }
 function rebuild() { const y = $('#pbody').scrollTop; build(); $('#pbody').scrollTop = y; }
@@ -403,7 +408,7 @@ const lockUi = () => { $('#modes [data-m=iv]').classList.toggle('locked', !ZP.ha
 addEventListener('zp:change', () => { if (mode === 'iv' && !ZP.has('premium')) setMode('sw'); rebuild(); renderPresets(); lockUi(); apply(); });
 setInterval(passRender, 6e4);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') ZP.verify(); });
-build(); buildWheel(); lockUi(); apply(); ui(); ZP.verify();
+build(); buildWheel(); lockUi(); apply(); ui(); ZP.verify(); DailyReward.init();
 
 /* ---------- Ana ekrana ekle ---------- */
 const A2 = { done: 'zamanlayici-a2done', last: 'zamanlayici-a2last', first: 5e3, every: 12e4, snooze: 3e5, stay: 12e3 };
