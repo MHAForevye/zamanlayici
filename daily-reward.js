@@ -1,126 +1,90 @@
 'use strict';
-/* Günlük kristal görevi: kimlik ve tüm ödül hesapları sunucu tarafındadır. */
+/* Günlük kristal görevi: FOREVYE ID uygulama oturumu kullanır.
+   Kristal hesabı, Nexus Pass'in mevcut np_links kaydından sunucuda otomatik bulunur.
+   Bu istemci hiçbir yerde ID.ANAHTAR / yedek anahtar istemez veya saklamaz. */
 (function (g) {
-  const API_BASE = 'https://mikroklimakontrolmerkezi.forevye.workers.dev';
-  const API = API_BASE + '/api/timer-reward';
-  const ID_API = API_BASE;
-  const ID_URL = 'https://mhaforevye.github.io/forevye-id/';
-  const APP_ID = 'zamanlayici';
-  const REDIRECT = new URL('./', location.href).href;
-  const KEY = 'zamanlayici-forevye-id-v1';
-  const LEGACY_KEY = 'zamanlayici-kristal-hesap-v1';
+  const API = 'https://mikroklimakontrolmerkezi.forevye.workers.dev';
+  const APP = 'zamanlayici';
+  const SESSION_KEY = 'zamanlayici-forevye-id-session-v1';
+  const PENDING_KEY = 'zamanlayici-forevye-id-pkce-v1';
   const TARGETS = [60, 300, 600, 900, 1800, 2700, 3600, 7200, 10800, 14400];
   const LABELS = ['1 dk', '5 dk', '10 dk', '15 dk', '30 dk', '45 dk', '1 sa', '2 sa', '3 sa', '4 sa'];
   const COLORS = ['#F2C66D', '#E78A68', '#D96C76', '#B77CCB', '#7F8FE2', '#59A9C7', '#54B8A0', '#91B75B', '#D1A34F', '#E58B4A'];
-  let idSession = loadId(), legacyCreds = loadLegacy(), idUser = idSession && idSession.user || null, walletLinked = false;
-  let task = null, sessionId = '', runningMode = '', pulseBusy = false, statusText = '', spinBusy = false, authBusy = false;
+  let session = loadSession(), task = null, sessionId = '', runningMode = '', pulseBusy = false, statusText = '', spinBusy = false, user = null;
   const $ = s => document.querySelector(s);
+  const te = new TextEncoder();
   const fmt = n => {
     n = Math.max(0, Math.floor(Number(n) || 0));
     const h = Math.floor(n / 3600), m = Math.floor(n % 3600 / 60), s = n % 60;
     return h ? `${h} sa ${m} dk` : m ? `${m} dk${s ? ` ${s} sn` : ''}` : `${s} sn`;
   };
   const crystals = n => Number(n || 0).toLocaleString('tr-TR', { minimumFractionDigits: 0, maximumFractionDigits: 4 });
-  function loadId() {
+  function loadSession() { try { const x = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); return x && typeof x.accessToken === 'string' && typeof x.refreshToken === 'string' ? x : null; } catch (_) { return null; } }
+  function saveSession(x) { session = x; try { localStorage.setItem(SESSION_KEY, JSON.stringify(x)); } catch (_) {} }
+  function clearSession() { session = null; user = null; task = null; try { localStorage.removeItem(SESSION_KEY); } catch (_) {} }
+  const b64u = bytes => { let s = ''; bytes.forEach(b => s += String.fromCharCode(b)); return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
+  const randomToken = n => b64u(crypto.getRandomValues(new Uint8Array(n)));
+  async function challenge(verifier) { return b64u(new Uint8Array(await crypto.subtle.digest('SHA-256', te.encode(verifier)))); }
+  function redirectUri() { return location.origin + location.pathname; }
+  async function identityPost(path, body) {
+    const r = await fetch(API + path, { method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw Object.assign(new Error(d.message || d.err || 'FOREVYE ID bağlantısı kurulamadı.'), { status: r.status, code: d.code || 'identity_error' });
+    return d;
+  }
+  async function getIdSiteUrl() {
+    const r = await fetch(API + '/identity/client-config', { cache: 'no-store' });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.idUrl) throw new Error(d.message || 'FOREVYE ID web adresi alınamadı.');
+    const u = new URL(d.idUrl);
+    if (u.protocol !== 'https:') throw new Error('FOREVYE ID adresi güvenli HTTPS olmalı.');
+    return u.href.endsWith('/') ? u.href : u.href + '/';
+  }
+  async function startLogin() {
     try {
-      const x = JSON.parse(localStorage.getItem(KEY) || 'null');
-      return x && /^[A-Za-z0-9_-]{30,64}$/.test(x.accessToken || '') ? x : null;
-    } catch (_) { return null; }
+      const idSite = await getIdSiteUrl();
+      const verifier = randomToken(32), state = randomToken(24), redirect = redirectUri();
+      sessionStorage.setItem(PENDING_KEY, JSON.stringify({ verifier, state, redirect, at: Date.now() }));
+      const q = new URLSearchParams({ app: APP, redirect, state, challenge: await challenge(verifier) });
+      location.assign(idSite + '#/baglan?' + q.toString());
+    } catch (e) { message('FOREVYE ID girişi başlatılamadı: ' + e.message); }
   }
-  function loadLegacy() {
-    try {
-      const c = JSON.parse(localStorage.getItem(LEGACY_KEY) || 'null');
-      return valid(c);
-    } catch (_) { return null; }
-  }
-  function valid(c) {
-    if (!c) return null;
-    const id = String(c.id || ''), token = String(c.token || '');
-    return /^\d{8}$/.test(id) && /^[A-Za-z0-9_-]{20,64}$/.test(token) ? { id, token } : null;
-  }
-  function parse(raw) {
-    const v = String(raw || '').trim();
-    let m = /^(\d{8})\.([A-Za-z0-9_-]{20,64})$/.exec(v);
-    if (m) return valid({ id: m[1], token: m[2] });
-    try {
-      const o = JSON.parse(v);
-      if (o && o.kr) return valid(o.kr);
-      if (o && o.id && o.token) return valid(o);
-    } catch (_) {}
-    return null;
-  }
-  const b64u = bytes => {
-    let bin = ''; bytes.forEach(x => bin += String.fromCharCode(x));
-    return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  };
-  function randomToken(n = 48) {
-    const b = new Uint8Array(n); crypto.getRandomValues(b); return b64u(b);
-  }
-  async function sha256b64(value) {
-    return b64u(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))));
-  }
-  async function startIdLogin() {
-    if (authBusy) return;
-    authBusy = true; message('FOREVYE ID güvenli oturumu açılıyor…');
-    try {
-      const verifier = randomToken(48), state = randomToken(24), challenge = await sha256b64(verifier);
-      sessionStorage.setItem('dr.id.pkce', JSON.stringify({ verifier, state, redirect: REDIRECT, created: Date.now() }));
-      const q = new URLSearchParams({ app: APP_ID, redirect: REDIRECT, state, challenge });
-      location.href = ID_URL + '#/baglan?' + q.toString();
-    } catch (_) { authBusy = false; message('Güvenli giriş başlatılamadı. Tarayıcını güncelle ve tekrar dene.'); }
-  }
-  async function exchangeIdCode() {
-    const q = new URLSearchParams(location.search), code = q.get('code'), state = q.get('state');
-    if (!code && !state) return false;
-    try {
-      const pending = JSON.parse(sessionStorage.getItem('dr.id.pkce') || 'null');
-      if (!pending || !code || !state || state !== pending.state || Date.now() - pending.created > 10 * 60e3) throw new Error('Giriş bağlantısının süresi dolmuş. Tekrar giriş yap.');
-      const r = await fetch(ID_API + '/identity/token/exchange', {
-        method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, verifier: pending.verifier, app: APP_ID, redirect: pending.redirect })
-      });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d.accessToken || !d.refreshToken || !d.user) throw new Error(d.message || 'FOREVYE ID oturumu doğrulanamadı.');
-      idSession = { accessToken: d.accessToken, refreshToken: d.refreshToken, user: d.user };
-      idUser = d.user;
-      localStorage.setItem(KEY, JSON.stringify(idSession));
-      sessionStorage.removeItem('dr.id.pkce');
+  async function handleCallback() {
+    const q = new URLSearchParams(location.search), code = q.get('code'), returnedState = q.get('state');
+    if (!code) return false;
+    let p = null; try { p = JSON.parse(sessionStorage.getItem(PENDING_KEY) || 'null'); } catch (_) {}
+    if (!p || !returnedState || returnedState !== p.state || Date.now() - p.at > 5 * 60e3) {
       history.replaceState(null, '', location.pathname + location.hash);
+      message('FOREVYE ID dönüşü doğrulanamadı. Yeniden giriş başlat.');
       return true;
-    } catch (e) {
-      sessionStorage.removeItem('dr.id.pkce');
-      history.replaceState(null, '', location.pathname + location.hash);
-      message(e.message || 'FOREVYE ID bağlantısı tamamlanamadı.');
-      return false;
     }
-  }
-  async function refreshIdToken() {
-    if (!idSession || !idSession.refreshToken) return false;
     try {
-      const r = await fetch(ID_API + '/identity/app/refresh', {
-        method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: idSession.refreshToken })
-      });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok || !d.accessToken || !d.refreshToken) {
-        if ([400, 401, 403, 404].includes(r.status)) { idSession = null; localStorage.removeItem(KEY); }
-        return false;
-      }
-      idSession = { accessToken: d.accessToken, refreshToken: d.refreshToken, user: idSession.user || null };
-      idUser = idSession.user || idUser;
-      localStorage.setItem(KEY, JSON.stringify(idSession));
-      return true;
-    } catch (_) { return false; }
+      const d = await identityPost('/identity/token/exchange', { code, verifier: p.verifier, app: APP, redirect: p.redirect });
+      if (!d.accessToken || !d.refreshToken || !d.user || !d.user.userId) throw new Error('FOREVYE ID oturumu eksik yanıt verdi.');
+      saveSession({ accessToken: d.accessToken, refreshToken: d.refreshToken, expiresAt: Date.now() + 25 * 60e3, user: d.user });
+      user = d.user;
+      message('FOREVYE ID tanındı. Kristal hesabın otomatik eşleştiriliyor…');
+    } catch (e) { message(e.message); }
+    finally {
+      sessionStorage.removeItem(PENDING_KEY);
+      history.replaceState(null, '', location.pathname + location.hash);
+    }
+    return true;
+  }
+  async function ensureAccess(force = false) {
+    if (!session || !session.refreshToken) throw Object.assign(new Error('FOREVYE ID oturumu açılmalı.'), { status: 401, code: 'id_session_required' });
+    if (!force && session.accessToken && Date.now() < (session.expiresAt || 0) - 30e3) return session.accessToken;
+    const d = await identityPost('/identity/app/refresh', { refreshToken: session.refreshToken });
+    if (!d.accessToken || !d.refreshToken) throw Object.assign(new Error('FOREVYE ID oturumu sona erdi. Yeniden giriş yap.'), { status: 401, code: 'id_session_expired' });
+    saveSession({ ...session, accessToken: d.accessToken, refreshToken: d.refreshToken, expiresAt: Date.now() + 25 * 60e3 });
+    return session.accessToken;
   }
   async function api(path, body = {}, retry = true) {
-    const token = idSession && idSession.accessToken;
-    if (!token && !legacyCreds) throw Object.assign(new Error('FOREVYE ID ile giriş yap.'), { code: 'no_account' });
-    const headers = { 'Content-Type': 'application/json' };
-    headers.Authorization = token ? `Bearer ${token}` : `Bearer ${legacyCreds.id}.${legacyCreds.token}`;
-    const r = await fetch(API + path, { method: 'POST', cache: 'no-store', headers, body: JSON.stringify(body) });
+    const token = await ensureAccess();
+    const r = await fetch(API + '/api/timer-reward' + path, { method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(body) });
     const d = await r.json().catch(() => ({}));
-    if (r.status === 401 && token && retry && await refreshIdToken()) return api(path, body, false);
-    if (!r.ok || d.ok !== true) throw Object.assign(new Error(d.err || d.message || d.error || 'İşlem tamamlanamadı.'), { status: r.status, code: d.code || 'request_failed' });
+    if (r.status === 401 && retry && session && session.refreshToken) { await ensureAccess(true); return api(path, body, false); }
+    if (!r.ok || d.ok !== true) throw Object.assign(new Error(d.err || d.message || 'İşlem tamamlanamadı.'), { status: r.status, code: d.code || 'request_failed' });
     return d;
   }
   function wheelSvg() {
@@ -136,11 +100,10 @@
   }
   function panelHtml() {
     return `<section class="dr-card" id="dr-card">
-      <div class="dr-head"><div><span class="dr-kicker">GÜNLÜK GÖREV</span><h3>Kristal çarkı</h3><p class="need">Günde bir kez çevir. Seçilen süreyi tamamla, ödülün bağlı Kristal hesabına otomatik yatsın.</p></div><span class="dr-chip">1 HAK / GÜN</span></div>
-      <div class="dr-layout"><div class="dr-wheel-col"><button type="button" id="dr-spin" class="dr-wheel-button" aria-label="Günlük kristal çarkını çevir" disabled>${wheelSvg()}<span class="dr-pointer" aria-hidden="true">◆</span></button><div id="dr-wheel-caption" class="dr-wheel-caption">FOREVYE ID ile devam et</div></div>
+      <div class="dr-head"><div><span class="dr-kicker">GÜNLÜK GÖREV</span><h3>Kristal çarkı</h3><p class="need">Her gün bir kez çevir. Seçilen süreyi Zamanlayıcı'da tamamla, kristallerin hesabına otomatik eklensin.</p></div><span class="dr-chip">1 HAK / GÜN</span></div>
+      <div class="dr-layout"><div class="dr-wheel-col"><button type="button" id="dr-spin" class="dr-wheel-button" aria-label="Günlük kristal çarkını çevir" disabled>${wheelSvg()}<span class="dr-pointer" aria-hidden="true">◆</span></button><div id="dr-wheel-caption" class="dr-wheel-caption">FOREVYE ID ile giriş yap</div></div>
         <div class="dr-info"><div id="dr-account-status" class="dr-account-status">FOREVYE ID oturumu bekleniyor.</div>
-          <div id="dr-idbox" class="dr-idbox"><button type="button" id="dr-id-login" class="dr-action">FOREVYE ID ile giriş yap</button><p class="dr-help">FOREVYE ID hesabınla güvenli şekilde tanın. Daha önce giriş yaptıysan tekrar parola girmen gerekmez.</p></div>
-          <div id="dr-linkbox" class="dr-linkbox" hidden><p class="dr-link-title">Kristal hesabını bir kez eşleştir</p><p class="dr-help">Bu FOREVYE ID hesabında kayıtlı bir Kristal hesabı bulamadık. Mevcut hesabını bir kez bağla; sonraki girişlerinde otomatik tanınacaksın.</p><label for="dr-credential">Mevcut Kristal hesap yedeği</label><textarea id="dr-credential" rows="2" autocomplete="off" spellcheck="false" placeholder="ID.ANAHTAR veya hesap yedek metni"></textarea><button type="button" id="dr-link" class="dr-action">Hesabı bir kez eşleştir</button></div>
+          <div id="dr-loginbox" class="dr-linkbox"><button type="button" id="dr-id-login" class="dr-action">FOREVYE ID ile giriş yap</button><p class="dr-help">FOREVYE ID hesabın, Nexus Pass'te bağladığın Kristal hesabını otomatik tanır. Yedek ID veya gizli anahtar gerekmez.</p></div>
           <div id="dr-task" class="dr-task" hidden><div class="dr-target"><span>BUGÜNKÜ HEDEF</span><b id="dr-target-value">—</b></div><div class="dr-reward"><span>TAMAMLAMA ÖDÜLÜ</span><b id="dr-reward-value">—</b></div><div class="dr-progress"><div id="dr-progress-fill"></div></div><div class="dr-progress-meta"><span id="dr-progress-text">0 / 0</span><span id="dr-percent">0%</span></div><p id="dr-message" class="dr-message">Süreyi tamamladığında ödül hesabına aktarılır.</p><button type="button" id="dr-disconnect" class="dr-text-button">FOREVYE ID oturumunu kapat</button></div>
         </div></div>
       <p id="dr-status" class="dr-status" role="status" aria-live="polite"></p>
@@ -156,19 +119,15 @@
   function message(t) { statusText = t || ''; const e = $('#dr-status'); if (e) e.textContent = statusText; }
   function render() {
     const card = $('#dr-card'); if (!card) return;
-    const signed = !!idSession || !!legacyCreds;
-    $('#dr-idbox').hidden = signed;
-    $('#dr-linkbox').hidden = !signed || walletLinked;
-    $('#dr-account-status').textContent = signed
-      ? (walletLinked ? `FOREVYE ID bağlı${idUser && idUser.username ? ' · ' + idUser.username : ''} · Kristal hesabı hazır` : 'FOREVYE ID tanındı · Kristal hesabı bir kez eşleştirilmeli.')
-      : 'Günlük kristal ödülü için FOREVYE ID hesabınla giriş yap.';
-    $('#dr-disconnect').hidden = !signed;
-    $('#dr-spin').disabled = !signed || !walletLinked || !task || task.spun || spinBusy;
-    $('#dr-wheel-caption').textContent = !signed ? 'FOREVYE ID İLE GİRİŞ' : !walletLinked ? 'ÖNCE KRİSTAL HESABINI EŞLEŞTİR' : spinBusy ? 'Çark dönüyor…' : !task || !task.spun ? 'ÇARKI ÇEVİR' : `Bugünkü hedef: ${fmt(task.targetSeconds)}`;
-    const box = $('#dr-task'); box.hidden = !signed || !walletLinked || !task || !task.spun;
+    const logged = !!session;
+    $('#dr-loginbox').hidden = logged;
+    $('#dr-account-status').textContent = logged ? `FOREVYE ID tanındı · ${user?.username || session.user?.username || 'Kristal hesabın eşleştiriliyor'}` : 'Kristal hesabını FOREVYE ID üzerinden otomatik tanıyacağız.';
+    $('#dr-disconnect').hidden = !logged;
+    $('#dr-spin').disabled = !logged || !task || task.spun || spinBusy;
+    $('#dr-wheel-caption').textContent = !logged ? 'FOREVYE ID ile giriş yap' : spinBusy ? 'Çark dönüyor…' : !task || !task.spun ? 'ÇARKI ÇEVİR' : `Bugünkü hedef: ${fmt(task.targetSeconds)}`;
+    const box = $('#dr-task'); box.hidden = !logged || !task || !task.spun;
     if (box.hidden) {
       $('#dr-spin').classList.toggle('is-spun', false);
-      message(statusText || (!signed ? 'FOREVYE ID oturumunu açtığında hesabın otomatik tanınır.' : !walletLinked ? 'Kristal hesabını bir kez eşleştir; sonraki girişlerde otomatik bağlanır.' : 'Bugünkü hakkın hazır. Çarkı bir kez çevir.'));
       return;
     }
     $('#dr-spin').classList.add('is-spun'); rotateTo(task.targetSeconds, false);
@@ -178,52 +137,29 @@
     $('#dr-progress-fill').style.width = pct + '%';
     $('#dr-progress-text').textContent = `${fmt(done)} / ${fmt(task.targetSeconds)}`;
     $('#dr-percent').textContent = Math.floor(pct) + '%';
-    $('#dr-message').textContent = task.paid ? `Görev tamamlandı. +${crystals(task.reward)} kristal hesabına eklendi.` : pct >= 100 ? 'Hedefe ulaştın. Ödülün sunucu tarafından işleniyor.' : 'Kronometre, geri sayım veya Aralık modunda ölçtüğün çalışma süresi burada birikir. Mola süresi sayılmaz.';
+    $('#dr-message').textContent = task.paid ? `Görev tamamlandı. +${crystals(task.reward)} kristal hesabına eklendi.` : pct >= 100 ? 'Hedef tamamlandı. Ödül hesabına aktarılıyor.' : 'Kronometre, geri sayım veya Aralık modunda ölçtüğün çalışma süresi burada birikir. Mola süresi sayılmaz.';
     message(statusText);
   }
   async function refresh() {
-    if (!idSession && !legacyCreds) { task = null; walletLinked = false; render(); return; }
+    if (!session) { task = null; render(); return; }
     try {
-      if (!idSession && legacyCreds) {
-        walletLinked = true;
-      } else {
-        const link = await api('/link/status');
-        walletLinked = !!link.linked;
-        if (!walletLinked && legacyCreds && idSession) {
-          await api('/link', { hesap: `${legacyCreds.id}.${legacyCreds.token}` });
-          walletLinked = true;
-          legacyCreds = null; localStorage.removeItem(LEGACY_KEY);
-        }
-      }
-      if (!walletLinked) { task = null; message('FOREVYE ID hesabın tanındı. Kristal hesabını bir kez eşleştirmen yeterli.'); render(); return; }
-      const d = await api('/state'); task = d.task; message('FOREVYE ID ve Kristal hesabın eşitlendi.');
+      const d = await api('/state'); task = d.task;
+      if (!user) user = session.user || null;
+      message('FOREVYE ID ve Kristal hesabın otomatik eşitlendi.');
     } catch (e) {
-      if (e.status === 401) {
-        idSession = null; localStorage.removeItem(KEY); walletLinked = false; task = null;
-        message('FOREVYE ID oturumunun süresi doldu. Yeniden giriş yap.');
-      } else message(e.message);
+      if (e.code === 'no_crystal_account') {
+        task = null;
+        message('FOREVYE ID tanındı ancak bu ID hesabında Nexus Pass ile eşlenmiş Kristal hesabı kaydı bulunamadı. Nexus Pass bağlantısı aynı ID hesabına ait olmalı.');
+      } else if (e.status === 401) { clearSession(); task = null; message('FOREVYE ID oturumunun süresi doldu. Yeniden giriş yap.'); }
+      else message(e.message);
     }
     render();
   }
-  async function linkWallet() {
-    const input = $('#dr-credential'), c = parse(input && input.value);
-    if (!c) return message('Kristal hesap yedeği tanınmadı. Bilgiyi kontrol et.');
-    const b = $('#dr-link'); if (b) { b.disabled = true; b.textContent = 'Eşleştiriliyor…'; }
-    try {
-      const d = await api('/link', { hesap: `${c.id}.${c.token}` });
-      walletLinked = !!d.linked; legacyCreds = null; localStorage.removeItem(LEGACY_KEY);
-      if (input) input.value = '';
-      const state = await api('/state'); task = state.task;
-      message('Kristal hesabın FOREVYE ID hesabına güvenli biçimde eşleştirildi. Bundan sonra otomatik tanınacaksın.');
-    } catch (e) { message(e.message || 'Hesap eşleştirilemedi.'); }
-    finally { if (b) { b.disabled = false; b.textContent = 'Hesabı bir kez eşleştir'; } render(); }
-  }
   async function spin() {
-    if ((!idSession && !legacyCreds) || !walletLinked || spinBusy) return;
+    if (!session || spinBusy) return;
     spinBusy = true; render(); message('Günlük hakkın sunucuda kontrol ediliyor…');
     try {
-      const d = await api('/spin'); task = d.task;
-      rotateTo(task.targetSeconds, true);
+      const d = await api('/spin'); task = d.task; rotateTo(task.targetSeconds, true);
       message(d.repeated ? 'Bugünkü çark hakkın daha önce kullanılmış.' : 'Çark dönüyor…');
       await new Promise(resolve => setTimeout(resolve, 4900));
       message(d.repeated ? 'Bugünkü çark hakkın daha önce kullanılmış.' : 'Çark durdu! Bugünkü hedefin belirlendi.');
@@ -233,73 +169,52 @@
   }
   async function startSegment(mode) {
     runningMode = mode || 'stopwatch';
-    if ((!idSession && !legacyCreds) || !walletLinked || !task || !task.spun || task.paid || sessionId) return;
-    try {
-      const d = await api('/start', { mode: runningMode }); sessionId = d.sessionId; task = d.task; render();
-    } catch (e) {
-      if (e.code === 'already_running') message('Bu kristal hesabında başka bir Zamanlayıcı oturumu açık. Diğer oturumu durdur veya sayfayı yenile.');
-      else if (e.code !== 'goal_done') message(e.message);
-    }
+    if (!session || !task || !task.spun || task.paid || sessionId) return;
+    try { const d = await api('/start', { mode: runningMode }); sessionId = d.sessionId; task = d.task; render(); }
+    catch (e) { if (e.code === 'already_running') message('Bu FOREVYE ID hesabında başka bir Zamanlayıcı oturumu çalışıyor. Diğer oturumu durdur veya sayfayı yenile.'); else if (e.code !== 'goal_done') message(e.message); }
   }
   async function stopSegment() {
     const id = sessionId; sessionId = ''; runningMode = '';
-    if (!id || (!idSession && !legacyCreds)) return;
+    if (!id || !session) return;
     try { const d = await api('/stop', { sessionId: id }); task = d.task; render(); }
-    catch (e) { message('Bağlantı kısa süreli kesildi; sunucu oturumu güvenli zaman aşımıyla kapatacak.'); }
+    catch (_) { message('Bağlantı kısa süreli kesildi; sunucu oturumu güvenli zaman aşımıyla kapatacak.'); }
   }
   async function completeTask() {
     const id = sessionId; sessionId = ''; runningMode = '';
-    if (!idSession && !legacyCreds) return;
+    if (!session) return;
     try {
       const d = await api('/complete', { sessionId: id }); task = d.task;
       if (d.awarded > 0) message(`Tebrikler! +${crystals(d.awarded)} kristal bakiyene eklendi.`);
       else if (task && task.paid) message(`Günlük hedef tamamlandı. +${crystals(task.reward)} kristal hesabına eklendi.`);
       else message(task && task.spun ? `Süre kaydedildi: ${fmt(task.creditedSeconds)} / ${fmt(task.targetSeconds)}.` : 'Günlük görev bulunamadı.');
       render();
-    } catch (e) { message('Ödül doğrulanamadı. İnternet bağlantısı geldiğinde tekrar dene; görev ilerlemen sunucuda korunur.'); }
+    } catch (_) { message('Ödül doğrulanamadı. İnternet bağlantısı geldiğinde tekrar dene; görev ilerlemen sunucuda korunur.'); }
   }
   async function pulse() {
-    if (!sessionId || (!idSession && !legacyCreds) || pulseBusy) return;
+    if (!sessionId || !session || pulseBusy) return;
     pulseBusy = true; const id = sessionId;
     try {
       const d = await api('/pulse', { sessionId: id }); task = d.task;
       if (d.awarded > 0) message(`Tebrikler! Hedef tamamlandı, +${crystals(d.awarded)} kristal hesabına eklendi.`);
       if (!d.active) { sessionId = ''; if (runningMode && task && !task.paid && task.creditedSeconds < task.targetSeconds) startSegment(runningMode); }
       render();
-    } catch (_) { /* Ağ kesilirse sunucu heartbeat aralığını sınırlar; istemci sonraki turda tekrar dener. */ }
+    } catch (_) { /* ağ kesilirse sonraki heartbeat tekrar dener */ }
     finally { pulseBusy = false; }
+  }
+  async function disconnect() {
+    if (!session) return;
+    if (!confirm('FOREVYE ID oturumu bu cihazdan kapatılsın mı? Kristal hesabın ve bakiyen ayrılmaz.')) return;
+    try { await identityPost('/identity/app/revoke', { refreshToken: session.refreshToken }); } catch (_) {}
+    clearSession(); message('FOREVYE ID oturumu bu cihazdan kapatıldı. Kristal hesabın ve bakiyen korunuyor.'); render();
   }
   function init() {
     document.addEventListener('click', e => {
-      const b = e.target.closest('#dr-id-login,#dr-link,#dr-spin,#dr-disconnect'); if (!b) return;
-      if (b.id === 'dr-id-login') startIdLogin();
-      else if (b.id === 'dr-link') linkWallet();
+      const b = e.target.closest('#dr-id-login,#dr-spin,#dr-disconnect'); if (!b) return;
+      if (b.id === 'dr-id-login') startLogin();
       else if (b.id === 'dr-spin') spin();
-      else if (b.id === 'dr-disconnect') {
-        if (confirm('FOREVYE ID oturumu bu cihazdaki Zamanlayıcı’dan kapatılsın mı? Kristal hesabı eşleştirmesi ve bakiye silinmez.')) {
-          if (idSession && idSession.refreshToken) fetch(ID_API + '/identity/app/revoke', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken: idSession.refreshToken }) }).catch(() => {});
-          idSession = null; idUser = null; task = null; walletLinked = false;
-          localStorage.removeItem(KEY); localStorage.removeItem(LEGACY_KEY); legacyCreds = null; message('FOREVYE ID oturumu bu cihazdan kapatıldı.'); render();
-        }
-      }
+      else if (b.id === 'dr-disconnect') disconnect();
     });
-    // Eski Mağaza/Hava hesap aktarım bağlantılarını da güvenli biçimde devral.
-    const legacyHash = /(?:^#|&)hesap=([^&]+)/.exec(location.hash);
-    if (legacyHash) {
-      try {
-        const imported = parse(decodeURIComponent(legacyHash[1]));
-        if (imported) {
-          legacyCreds = imported;
-          localStorage.setItem(LEGACY_KEY, JSON.stringify(imported));
-        }
-      } catch (_) {}
-      try { history.replaceState(null, '', location.pathname + location.search); } catch (_) {}
-    }
-    (async () => {
-      await exchangeIdCode();
-      render();
-      if (idSession || legacyCreds) await refresh();
-    })();
+    handleCallback().then(() => { session = loadSession(); user = session && session.user || user; render(); if (session) refresh(); });
     setInterval(pulse, 20000);
   }
   g.DailyReward = {
@@ -309,8 +224,8 @@
       if (mode === 'iv' && phase % 2 === 1) return;
       const currentMode = mode === 'iv' ? 'interval-work' : mode === 'cd' ? 'countdown' : 'stopwatch';
       runningMode = currentMode;
-      if (!sessionId) startSegment(currentMode);
-      else pulse();
+      if (!session) return;
+      if (!sessionId) startSegment(currentMode); else pulse();
     },
     refresh
   };
