@@ -5,7 +5,7 @@
   const API = 'https://mikroklimakontrolmerkezi.forevye.workers.dev/api/zamanlayici/', MARKET = 'https://mhaforevye.github.io/nexus-pass/#discover';
   const KP = 'zamanlayici-pass', KD = 'zamanlayici-dev', RANK = { free: 0, plus: 1, premium: 2 }, DAY = 864e5, MAXP = 5;
   const ls = { get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} } };
-  let list = [];
+  let list = [], accountPlan='free', accountExp=0;
   try { const j = JSON.parse(ls.get(KP) || '{}'); if (Array.isArray(j.list)) list = j.list.filter(x => x && typeof x.c === 'string' && RANK[x.p] > 0 && Number.isFinite(x.e) && Number.isFinite(x.v)).slice(0, MAXP); } catch (_) {}
   const store = () => ls.set(KP, JSON.stringify({ list }));
   const prune = () => { const n = Date.now(); list = list.filter(x => x.e > n).sort((a, b) => b.e - a.e).slice(0, MAXP); };
@@ -16,9 +16,26 @@
     if (!/^[a-f0-9]{32}$/.test(d || '')) { const a = new Uint8Array(16); crypto.getRandomValues(a); d = [...a].map(b => b.toString(16).padStart(2, '0')).join(''); ls.set(KD, d); }
     return d;
   }
-  const best = () => list.filter(x => x.e > Date.now()).sort((a, b) => RANK[b.p] - RANK[a.p] || b.e - a.e)[0];
-  const plan = () => (best() || { p: 'free' }).p;
-  const expiry = () => (best() || { e: 0 }).e;
+  async function syncAccountSubscription(){
+    try {
+      await window.KR?.ready?.();
+      const pair=window.KR?.creds?.(); if(!pair) return;
+      const r=await fetch('https://mikroklimakontrolmerkezi.forevye.workers.dev/api/subscriptions/state',{
+        method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+pair.id+'.'+pair.token},
+        body:'{}',cache:'no-store'
+      });
+      if(!r.ok)return;
+      const j=await r.json(), a=(j.subscriptions||[]).filter(x=>x.app==='zamanlayici'&&x.active);
+      const rank={free:0,plus:1,premium:2};
+      a.sort((u,v)=>(rank[v.tier]||0)-(rank[u.tier]||0)||v.expires_at-u.expires_at);
+      if(a[0]){accountPlan=a[0].tier;accountExp=a[0].expires_at*1000;}
+      else {accountPlan='free';accountExp=0;}
+      emit();
+    } catch(_) {}
+  }
+  const best = () => accountExp>Date.now()?{p:accountPlan,e:accountExp}:list.filter(x => x.e > Date.now()).sort((a, b) => RANK[b.p] - RANK[a.p] || b.e - a.e)[0];
+  const plan = () => accountExp>Date.now()?accountPlan:(best() || { p: 'free' }).p;
+  const expiry = () => accountExp>Date.now()?accountExp:(best() || { e: 0 }).e;
   const has = l => RANK[plan()] >= RANK[l];
   let sig = plan() + '|' + expiry();
   const emit = () => { const s = plan() + '|' + expiry(); if (s !== sig) { sig = s; g.dispatchEvent(new Event('zp:change')); } };
@@ -48,5 +65,6 @@
     prune(); store(); emit();
   }
   setInterval(() => { prune(); emit(); }, 3e4);
-  g.ZP = { plan, has, expiry, redeem, verify, norm, MARKET };
+  g.ZP = { plan, has, expiry, redeem, verify, norm, MARKET, syncAccountSubscription };
+  syncAccountSubscription();
 })(window);
